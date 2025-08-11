@@ -1,0 +1,12 @@
+[build]
+  command = "cd frontend && npm run build"
+  publish = "frontend/build"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[build.environment]
+  # เปลี่ยน URL นี้เป็น Backend URL ของคุณหลังจาก Deploy
+  REACT_APP_API_URL = "https://your-backend-url.onrender.com"
