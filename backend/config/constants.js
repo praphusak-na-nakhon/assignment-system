@@ -12,6 +12,11 @@ module.exports = {
   GOOGLE_SHEETS_ID: process.env.GOOGLE_SHEETS_ID,
   GDRIVE_FOLDER_ID: process.env.GDRIVE_FOLDER_ID || '1wyP7hNLzeJVAm2TeX6hEkblW0wK0cfcK',
   
+  // Cloudinary Configuration
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
+  
   // File Upload
   MAX_FILE_SIZE: process.env.MAX_FILE_SIZE || 10485760, // 10MB
   ALLOWED_FILE_TYPES: (process.env.ALLOWED_FILE_TYPES || 'image/jpeg,image/jpg,image/png,image/gif').split(','),

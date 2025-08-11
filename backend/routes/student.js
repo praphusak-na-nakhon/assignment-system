@@ -146,44 +146,39 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
 
     console.log(`🔍 [${new Date().toISOString()}] Data validation completed`);;
 
-    // Save file with new naming convention and folder structure
-    console.log(`💾 [${new Date().toISOString()}] Saving file to subject folder...`);
+    // อัปโหลดไฟล์ไปยัง Cloudinary
+    console.log(`☁️ [${new Date().toISOString()}] Uploading file to Cloudinary...`);
     
-    // สร้างชื่อไฟล์ใหม่: เลขนักเรียน_ชื่อ-นามสกุล_ชื่องาน
-    const fileName = fileManager.generateFileName(
-      req.user.studentId,
-      req.user.name,
-      assignment.title,
-      req.file.originalname
-    );
-    
-    // บันทึกไฟล์ในโฟลเดอร์งานที่ถูกต้อง
+    // อัปโหลดไฟล์ไปยัง Cloudinary ด้วยระบบโฟลเดอร์ใหม่
     const fileResult = await fileManager.saveFile(
       req.file.buffer,
-      fileName,
+      req.user.studentId,
+      req.user.name,
       subject.name,
       subject.class,
       assignment.title
     );
     
-    var fileUrl = `${req.protocol}://${req.get('host')}/uploads/${fileResult.relativePath}`;
+    var fileUrl = fileResult.url; // ใช้ URL จาก Cloudinary
     
     const fileUploadTime = Date.now();
-    console.log(`✅ [${new Date().toISOString()}] File saved locally: ${fileName} in ${fileUploadTime - dataLoadTime}ms`);
+    console.log(`✅ [${new Date().toISOString()}] File uploaded to Cloudinary: ${fileResult.fileName} in ${fileUploadTime - dataLoadTime}ms`);
 
     // Calculate score (subject.scorePerAssignment or fallback calculation)
     const score = subject.scorePerAssignment || (
       subject.totalAssignments > 0 ? subject.maxScore / subject.totalAssignments : 0
     );
 
-    // Save submission to sheets (with mock file URL)
+    // Save submission to sheets (with Cloudinary URL)
     const submissionData = {
       studentId: req.user.studentId,
       assignmentId,
       subjectId,
-      fileName: fileName,
+      fileName: fileResult.fileName,
       fileUrl: fileUrl,
-      score: score
+      score: score,
+      cloudinaryId: fileResult.cloudinaryId, // เก็บ Cloudinary ID สำหรับการลบในอนาคต
+      thumbnailUrl: fileResult.thumbnailUrl // เก็บ thumbnail สำหรับแสดงผล
     };
 
     console.log(`📝 [${new Date().toISOString()}] Saving submission to Google Sheets...`);
