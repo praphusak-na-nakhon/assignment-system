@@ -15,18 +15,55 @@ app.set('trust proxy', 1);
 
 // CORS configuration for production
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'https://wondrous-piroshki-96cc9e.netlify.app',
-    /https:\/\/.*\.netlify\.app$/  // Allow all Netlify preview deployments
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://wondrous-piroshki-96cc9e.netlify.app'
+    ];
+    
+    // Check if origin is in allowed list or matches Netlify pattern
+    if (allowedOrigins.includes(origin) || /https:\/\/.*\.netlify\.app$/.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'studentId', 'username', 'password', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type', 
+    'studentId', 
+    'username', 
+    'password', 
+    'Authorization',
+    'Access-Control-Allow-Origin',
+    'Access-Control-Allow-Headers',
+    'Access-Control-Allow-Methods'
+  ],
+  optionsSuccessStatus: 200 // For legacy browser support
 };
 
-// Middleware
+// Middleware with additional CORS headers
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && (origin.includes('localhost') || origin.includes('netlify.app'))) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, studentId, username, password, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  next();
+});
+
 app.use(cors(corsOptions));
 
 // Handle preflight requests explicitly
