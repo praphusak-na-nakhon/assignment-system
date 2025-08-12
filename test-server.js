@@ -60,6 +60,50 @@ app.get('/api/teacher/subjects', (req, res) => {
   }
 });
 
+// Mock teacher endpoints
+app.get('/api/teacher/students', (req, res) => {
+  res.json({
+    success: true,
+    students: [
+      { id: '19450', name: 'นักเรียน A', class: 'ม.1/1' },
+      { id: '19451', name: 'นักเรียน B', class: 'ม.1/1' }
+    ]
+  });
+});
+
+app.get('/api/teacher/assignments', (req, res) => {
+  res.json({
+    success: true,
+    assignments: [
+      { id: 1, title: 'การบ้านที่ 1', subject: 'วิทยาศาสตร์', dueDate: '2025-08-15' },
+      { id: 2, title: 'การบ้านที่ 2', subject: 'คณิตศาสตร์', dueDate: '2025-08-20' }
+    ]
+  });
+});
+
+app.get('/api/teacher/submissions', (req, res) => {
+  res.json({
+    success: true,
+    submissions: [
+      { id: 1, studentId: '19450', assignmentTitle: 'การบ้านที่ 1', status: 'submitted', submittedAt: '2025-08-12' },
+      { id: 2, studentId: '19451', assignmentTitle: 'การบ้านที่ 1', status: 'pending' }
+    ]
+  });
+});
+
+// Mock student endpoints
+app.get('/api/student/dashboard', (req, res) => {
+  res.json({
+    success: true,
+    assignments: [
+      { id: 1, title: 'การบ้านที่ 1', subject: 'วิทยาศาสตร์', dueDate: '2025-08-15', status: 'pending' },
+      { id: 2, title: 'การบ้านที่ 2', subject: 'คณิตศาสตร์', dueDate: '2025-08-20', status: 'submitted' }
+    ],
+    totalAssignments: 2,
+    submittedAssignments: 1
+  });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Test server running on port ${PORT}`);
 });
