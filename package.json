@@ -33,6 +33,13 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
+    "cloudinary": "^2.7.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "googleapis": "^155.0.1",
+    "multer": "^2.0.2",
     "serve": "^14.2.4"
   }
 }
