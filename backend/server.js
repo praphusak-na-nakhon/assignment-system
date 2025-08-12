@@ -13,8 +13,20 @@ const app = express();
 // Trust proxy for Railway/production deployment
 app.set('trust proxy', 1);
 
+// CORS configuration for production
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'https://wondrous-piroshki-96cc9e.netlify.app',
+    /https:\/\/.*\.netlify\.app$/  // Allow all Netlify preview deployments
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'studentId', 'username', 'password', 'Authorization']
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
