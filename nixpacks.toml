@@ -8,4 +8,4 @@ cmds = ['npm install', 'cd backend && npm install']
 cmds = []
 
 [start]
-cmd = 'cd backend && npm start'
+cmd = 'npm start'
