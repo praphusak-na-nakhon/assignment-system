@@ -19,7 +19,7 @@
   NPM_CONFIG_LOGLEVEL = "error"
   
   # Production API URL
-  REACT_APP_API_URL = "https://assignment-backend-production-9cff.up.railway.app/api"
+  REACT_APP_API_URL = "https://assignment-system-one.vercel.app/api"
 
 # Redirects for React Router (SPA support)
 [[redirects]]
