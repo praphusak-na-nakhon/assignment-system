@@ -58,10 +58,23 @@ setupStaticFiles(app);
 
 // Root endpoint for Railway health check
 app.get('/', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
   res.json({ 
     success: true, 
     message: 'Online Assignment Submission System API',
-    version: '1.0.0',
+    version: '1.0.1',
+    timestamp: new Date().toISOString(),
+    cors_configured: true
+  });
+});
+
+// Test CORS endpoint
+app.get('/test-cors', (req, res) => {
+  res.header('Access-Control-Allow-Origin', 'https://wondrous-piroshki-96cc9e.netlify.app');
+  res.json({ 
+    success: true, 
+    message: 'CORS test successful',
+    origin: req.headers.origin,
     timestamp: new Date().toISOString()
   });
 });
