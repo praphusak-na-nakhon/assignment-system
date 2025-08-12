@@ -53,12 +53,12 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   loginStudent: (studentId) => 
-    axios.post(`${API_BASE_URL}/student/login`, {}, { 
+    api.post('/student/login', {}, { 
       headers: { studentId } 
     }),
   
   loginTeacher: (username, password) =>
-    axios.get(`${API_BASE_URL}/teacher/subjects`, {
+    api.get('/teacher/subjects', {
       headers: { username, password }
     }),
 };
