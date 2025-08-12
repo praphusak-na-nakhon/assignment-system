@@ -4,6 +4,6 @@
     "builder": "nixpacks"
   },
   "deploy": {
-    "startCommand": "npm run start:backend"
+    "startCommand": "cd backend && npm start"
   }
 }
