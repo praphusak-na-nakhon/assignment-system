@@ -17,6 +17,7 @@ app.set('trust proxy', 1);
 const corsOptions = {
   origin: [
     'http://localhost:3000',
+    'http://localhost:3001',
     'https://wondrous-piroshki-96cc9e.netlify.app',
     /https:\/\/.*\.netlify\.app$/  // Allow all Netlify preview deployments
   ],
@@ -27,6 +28,10 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
