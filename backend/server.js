@@ -13,42 +13,31 @@ const app = express();
 // Trust proxy for Railway/production deployment
 app.set('trust proxy', 1);
 
-// Simple CORS configuration - allow all for debugging
+// Permissive CORS configuration for Railway deployment
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  // Allow specific origins
-  if (origin === 'https://wondrous-piroshki-96cc9e.netlify.app' || 
-      origin?.includes('localhost') || 
-      origin?.includes('netlify.app')) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  
+  // Always set CORS headers for Netlify domain
+  res.header('Access-Control-Allow-Origin', 'https://wondrous-piroshki-96cc9e.netlify.app');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, studentId, username, password');
+  res.header('Access-Control-Allow-Headers', '*');
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400'); // 24 hours
+  res.header('Access-Control-Max-Age', '3600');
   
-  // Handle preflight
+  // Handle preflight immediately
   if (req.method === 'OPTIONS') {
-    return res.status(200).json({
-      success: true,
-      message: 'CORS preflight OK'
-    });
+    console.log('OPTIONS request from:', req.headers.origin);
+    return res.status(200).end();
   }
   
   next();
 });
 
-// Fallback CORS middleware
-const corsOptions = {
-  origin: ['https://wondrous-piroshki-96cc9e.netlify.app', 'http://localhost:3000', 'http://localhost:3001'],
+// Additional CORS middleware as backup
+app.use(cors({
+  origin: 'https://wondrous-piroshki-96cc9e.netlify.app',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'studentId', 'username', 'password']
-};
-
-app.use(cors(corsOptions));
+  allowedHeaders: ['Content-Type', 'Authorization', 'studentId', 'username', 'password']
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
