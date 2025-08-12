@@ -12,14 +12,15 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.14",
+    "cross-env": "^10.0.0",
     "postcss": "^8.4.24",
     "react-scripts": "5.0.1",
     "tailwindcss": "^3.3.0"
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "CI=false react-scripts build",
-    "build:netlify": "CI=false npm run build",
+    "build": "cross-env CI=false react-scripts build",
+    "build:netlify": "cross-env CI=false npm run build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

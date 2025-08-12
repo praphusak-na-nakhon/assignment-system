@@ -1,6 +1,6 @@
 [build]
   # Build command
-  command = "cd frontend && npm install && npm run build"
+  command = "cd frontend && npm install && cross-env CI=false npm run build"
   
   # Directory to publish (build output)
   publish = "frontend/build"
