@@ -26,8 +26,8 @@
   "author": "Assignment System Developer",
   "license": "MIT",
   "engines": {
-    "node": ">=16.0.0",
-    "npm": ">=7.0.0"
+    "node": "18.x",
+    "npm": "9.x"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
