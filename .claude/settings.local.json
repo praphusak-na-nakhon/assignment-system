@@ -25,7 +25,8 @@
       "Bash(rs)",
       "Bash(touch:*)",
       "Bash(npm run build:*)",
-      "Bash(set CI=false)"
+      "Bash(set CI=false)",
+      "Bash(npm update:*)"
     ],
     "deny": []
   }

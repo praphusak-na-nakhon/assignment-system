@@ -1,6 +1,6 @@
 [build]
-  # Build command
-  command = "cd frontend && npm install && npm run build"
+  # Build command with explicit Node environment
+  command = "cd frontend && npm ci --silent && npm run build"
   
   # Directory to publish (build output)
   publish = "frontend/build"
@@ -9,10 +9,13 @@
   # Node.js version
   NODE_VERSION = "18"
   
-  # Disable CI strict mode for warnings
+  # Disable CI strict mode and npm warnings
   CI = "false"
+  NPM_CONFIG_AUDIT = "false"
+  NPM_CONFIG_FUND = "false"
+  NPM_CONFIG_LOGLEVEL = "error"
   
-  # Production API URL (จะต้องใส่ค่าจริงใน Netlify dashboard)
+  # Production API URL
   REACT_APP_API_URL = "https://assignment-backend-production-9cff.up.railway.app/api"
 
 # Redirects for React Router (SPA support)
