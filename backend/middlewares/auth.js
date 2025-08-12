@@ -37,6 +37,15 @@ const authenticateStudent = async (req, res, next) => {
   
   try {
     const students = await sheetsService.getStudents();
+    
+    // If we can't get students data, reject authentication
+    if (!students || students.length === 0) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'ไม่สามารถเชื่อมต่อกับฐานข้อมูลนักเรียน' 
+      });
+    }
+    
     const student = students.find(s => s.studentId === finalStudentId);
     
     if (!student) {
@@ -56,9 +65,10 @@ const authenticateStudent = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Student authentication error:', error);
-    res.status(500).json({ 
+    // Return 401 instead of 500 to prevent fake logins
+    return res.status(401).json({ 
       success: false, 
-      message: 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูลนักเรียน' 
+      message: 'ไม่สามารถตรวจสอบข้อมูลนักเรียนได้ กรุณาลองใหม่อีกครั้ง' 
     });
   }
 };

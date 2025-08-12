@@ -22,8 +22,8 @@ const upload = multer({
 router.post('/login', authenticateStudent, (req, res) => {
   res.json({
     success: true,
-    message: 'เข้าสู่ระบบเรียบร้อย',
-    data: {
+    message: 'Student login successful',
+    user: {
       studentId: req.user.studentId,
       name: req.user.name,
       class: req.user.class,
@@ -72,16 +72,14 @@ router.get('/dashboard', authenticateStudent, async (req, res) => {
     
     res.json({
       success: true,
-      data: {
-        student: {
-          studentId: req.user.studentId,
-          name: req.user.name,
-          class: req.user.class
-        },
-        subjects: studentSubjects,
-        assignments: enrichedAssignments,
-        totalScore: studentSubmissions.reduce((sum, sub) => sum + sub.score, 0)
-      }
+      student: {
+        studentId: req.user.studentId,
+        name: req.user.name,
+        class: req.user.class
+      },
+      subjects: studentSubjects,
+      assignments: enrichedAssignments,
+      totalScore: studentSubmissions.reduce((sum, sub) => sum + sub.score, 0)
     });
   } catch (error) {
     console.error('Get student dashboard error:', error);

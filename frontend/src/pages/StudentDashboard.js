@@ -66,7 +66,7 @@ const StudentDashboard = () => {
     );
   }
 
-  const { student, subjects, assignments, totalScore } = dashboardData;
+  const { student, subjects, assignments, totalScore } = dashboardData.data || dashboardData;
 
   return (
     <div className="min-h-screen bg-gray-50">
