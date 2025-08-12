@@ -13,61 +13,42 @@ const app = express();
 // Trust proxy for Railway/production deployment
 app.set('trust proxy', 1);
 
-// CORS configuration for production
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'https://wondrous-piroshki-96cc9e.netlify.app'
-    ];
-    
-    // Check if origin is in allowed list or matches Netlify pattern
-    if (allowedOrigins.includes(origin) || /https:\/\/.*\.netlify\.app$/.test(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: [
-    'Content-Type', 
-    'studentId', 
-    'username', 
-    'password', 
-    'Authorization',
-    'Access-Control-Allow-Origin',
-    'Access-Control-Allow-Headers',
-    'Access-Control-Allow-Methods'
-  ],
-  optionsSuccessStatus: 200 // For legacy browser support
-};
-
-// Middleware with additional CORS headers
+// Simple CORS configuration - allow all for debugging
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && (origin.includes('localhost') || origin.includes('netlify.app'))) {
+  
+  // Allow specific origins
+  if (origin === 'https://wondrous-piroshki-96cc9e.netlify.app' || 
+      origin?.includes('localhost') || 
+      origin?.includes('netlify.app')) {
     res.header('Access-Control-Allow-Origin', origin);
   }
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, studentId, username, password, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
   
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, studentId, username, password');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400'); // 24 hours
+  
+  // Handle preflight
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).json({
+      success: true,
+      message: 'CORS preflight OK'
+    });
   }
+  
   next();
 });
 
-app.use(cors(corsOptions));
+// Fallback CORS middleware
+const corsOptions = {
+  origin: ['https://wondrous-piroshki-96cc9e.netlify.app', 'http://localhost:3000', 'http://localhost:3001'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'studentId', 'username', 'password']
+};
 
-// Handle preflight requests explicitly
-app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
