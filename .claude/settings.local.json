@@ -27,7 +27,8 @@
       "Bash(npm run build:*)",
       "Bash(set CI=false)",
       "Bash(npm update:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git check-ignore:*)"
     ],
     "deny": []
   }
