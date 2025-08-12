@@ -15,25 +15,56 @@ const getAuthHeaders = () => {
   if (!authData) return {};
   
   try {
-    const { user, userType } = JSON.parse(authData);
-    if (userType === 'teacher') {
+    const parsedData = JSON.parse(authData);
+    console.log('Parsed auth data:', parsedData); // Debug log
+    
+    const { user, userType } = parsedData;
+    
+    if (userType === 'teacher' && user && user.username) {
       return {
         username: user.username,
         password: process.env.REACT_APP_ADMIN_PASSWORD || 'password123'
       };
     } else if (userType === 'student') {
-      return {
-        studentId: user.studentId
-      };
+      if (!user) {
+        console.warn('Student user data is undefined');
+        return {};
+      }
+      
+      // Handle both direct studentId and nested studentId
+      const studentId = user.studentId || user.id;
+      if (studentId) {
+        return {
+          studentId: studentId
+        };
+      } else {
+        console.warn('No studentId found in user data:', user);
+      }
     }
   } catch (error) {
     console.error('Error parsing auth data:', error);
+    localStorage.removeItem('authData'); // Clear invalid data
   }
   return {};
 };
 
 // Add request interceptor to include auth headers
 api.interceptors.request.use((config) => {
+  // Clear any corrupted auth data on startup
+  const authData = localStorage.getItem('authData');
+  if (authData) {
+    try {
+      const parsed = JSON.parse(authData);
+      if (!parsed.user || !parsed.userType) {
+        console.log('Clearing corrupted auth data');
+        localStorage.removeItem('authData');
+      }
+    } catch (e) {
+      console.log('Clearing invalid auth data');
+      localStorage.removeItem('authData');
+    }
+  }
+  
   const authHeaders = getAuthHeaders();
   config.headers = { ...config.headers, ...authHeaders };
   return config;
@@ -41,8 +72,12 @@ api.interceptors.request.use((config) => {
 
 // Add response interceptor for error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('API Response:', response.config.url, response.data); // Debug log
+    return response;
+  },
   (error) => {
+    console.error('API Error:', error.config?.url, error.response?.data);
     if (error.response?.status === 401) {
       localStorage.removeItem('authData');
       window.location.href = '/';

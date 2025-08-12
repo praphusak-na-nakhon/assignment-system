@@ -24,10 +24,10 @@ const StudentDashboard = () => {
       
       // Force refresh by adding timestamp to prevent cache
       const response = await studentAPI.getDashboard();
-      console.log('Dashboard data:', response.data.data); // Debug log
-      console.log('Assignments count:', response.data.data.assignments.length); // Debug assignments
+      console.log('Dashboard data:', response.data); // Debug log
+      console.log('Assignments count:', response.data.assignments.length); // Debug assignments
       
-      setDashboardData(response.data.data);
+      setDashboardData(response.data);
       
       if (forceRefresh) {
         toast.success('รีเฟรชข้อมูลเรียบร้อย');
