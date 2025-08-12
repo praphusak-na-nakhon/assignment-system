@@ -1,12 +1,34 @@
 [build]
-  command = "cd frontend && npm run build"
+  # Build command
+  command = "cd frontend && npm install && npm run build"
+  
+  # Directory to publish (build output)
   publish = "frontend/build"
 
+[build.environment]
+  # Node.js version
+  NODE_VERSION = "18"
+  
+  # Production API URL (จะต้องใส่ค่าจริงใน Netlify dashboard)
+  REACT_APP_API_URL = "https://assignment-backend-production-9cff.up.railway.app/api"
+
+# Redirects for React Router (SPA support)
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-[build.environment]
-  # เปลี่ยน URL นี้เป็น Backend URL ของคุณหลังจาก Deploy
-  REACT_APP_API_URL = "https://your-backend-url.onrender.com"
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Cache static assets
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
