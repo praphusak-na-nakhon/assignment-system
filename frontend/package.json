@@ -19,8 +19,8 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "cross-env CI=false react-scripts build",
-    "build:netlify": "cross-env CI=false npm run build",
+    "build": "react-scripts build",
+    "build:netlify": "npm run build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

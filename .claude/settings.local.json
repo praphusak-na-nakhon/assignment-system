@@ -24,7 +24,8 @@
       "Bash(git push:*)",
       "Bash(rs)",
       "Bash(touch:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(set CI=false)"
     ],
     "deny": []
   }

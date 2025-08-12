@@ -1,6 +1,6 @@
 [build]
   # Build command
-  command = "cd frontend && npm install && cross-env CI=false npm run build"
+  command = "cd frontend && npm install && npm run build"
   
   # Directory to publish (build output)
   publish = "frontend/build"
@@ -8,6 +8,9 @@
 [build.environment]
   # Node.js version
   NODE_VERSION = "18"
+  
+  # Disable CI strict mode for warnings
+  CI = "false"
   
   # Production API URL (จะต้องใส่ค่าจริงใน Netlify dashboard)
   REACT_APP_API_URL = "https://assignment-backend-production-9cff.up.railway.app/api"
