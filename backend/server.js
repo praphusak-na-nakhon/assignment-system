@@ -44,6 +44,16 @@ app.use(limiter);
 const setupStaticFiles = require('./middleware/static');
 setupStaticFiles(app);
 
+// Root endpoint for Railway health check
+app.get('/', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Online Assignment Submission System API',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Routes
 app.use('/api/teacher', teacherRoutes);
 app.use('/api/student', studentRoutes);
@@ -74,8 +84,17 @@ app.use('*', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server is running on port ${PORT}`);
   console.log(`📋 Assignment Submission System Backend Started`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Process terminated');
+  });
 });
