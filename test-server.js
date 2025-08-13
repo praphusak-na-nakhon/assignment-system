@@ -2,6 +2,10 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Import Supabase services
+const supabaseDatabase = require('./backend/services/supabaseDatabase');
+const { authenticateTeacher, authenticateStudent } = require('./backend/middlewares/supabaseAuth');
+
 // Simple CORS headers
 app.use((req, res, next) => {
   const allowedOrigins = [
@@ -42,53 +46,61 @@ app.get('/api/test', (req, res) => {
   });
 });
 
-// Student login endpoint
-app.post('/api/student/login', (req, res) => {
-  const studentId = req.headers.studentid || req.headers.studentId;
-  if (studentId) {
-    res.json({
-      success: true,
-      message: 'Student login successful',
-      data: { 
-        studentId: studentId, 
-        name: `นักเรียน ${studentId}`,
-        class: 'ม.1/1',
-        subjects: []
-      }
-    });
-  } else {
-    res.status(400).json({ success: false, message: 'กรุณาระบุเลขประจำตัวนักเรียน' });
-  }
-});
-
-// Teacher login endpoint  
-app.get('/api/teacher/subjects', (req, res) => {
-  const { username, password } = req.headers;
-  if (username && password) {
-    res.json({
-      success: true,
-      message: 'Teacher login successful',
-      data: [
-        { id: '1', name: 'วิทยาศาสตร์', class: 'ม.1/1', maxScore: 100, totalAssignments: 3 },
-        { id: '2', name: 'คณิตศาสตร์', class: 'ม.1/1', maxScore: 100, totalAssignments: 2 },
-        { id: '3', name: 'ภาษาไทย', class: 'ม.1/2', maxScore: 100, totalAssignments: 2 }
-      ]
-    });
-  } else {
-    res.status(401).json({ success: false, message: 'กรุณาระบุชื่อผู้ใช้และรหัสผ่าน' });
-  }
-});
-
-// Mock teacher endpoints
-app.get('/api/teacher/students', (req, res) => {
+// Student login endpoint with Supabase
+app.post('/api/student/login', authenticateStudent, (req, res) => {
   res.json({
     success: true,
-    data: [
-      { id: '19450', studentId: '19450', name: 'เด็กหญิงกัสนี บุตรโกบ', class: 'ม.1/1', totalScore: 0 },
-      { id: '19451', studentId: '19451', name: 'เด็กหญิงกานต์ธิดา ตี้กุล', class: 'ม.1/1', totalScore: 0 },
-      { id: '19452', studentId: '19452', name: 'เด็กหญิงจิณณพัด ชายกุล', class: 'ม.1/2', totalScore: 0 }
-    ]
+    message: 'Student login successful',
+    data: {
+      studentId: req.user.studentId,
+      name: req.user.name,
+      class: req.user.class,
+      subjects: []
+    }
   });
+});
+
+// Teacher login endpoint with Supabase  
+app.get('/api/teacher/subjects', authenticateTeacher, async (req, res) => {
+  try {
+    const subjects = await supabaseDatabase.getSubjects();
+    res.json({ 
+      success: true, 
+      message: 'Teacher login successful',
+      data: subjects.map(s => ({
+        id: s.id,
+        name: s.name,
+        class: s.class,
+        maxScore: s.max_score,
+        totalAssignments: s.total_assignments,
+        scorePerAssignment: s.score_per_assignment
+      }))
+    });
+  } catch (error) {
+    console.error('Get subjects error:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลวิชา' });
+  }
+});
+
+// Teacher endpoints with Supabase
+app.get('/api/teacher/students', authenticateTeacher, async (req, res) => {
+  try {
+    const students = await supabaseDatabase.getStudents();
+    res.json({ 
+      success: true, 
+      data: students.map(s => ({
+        id: s.id,
+        studentId: s.student_id,
+        name: s.name,
+        class: s.class,
+        subjects: '', // Legacy field
+        totalScore: s.total_score
+      }))
+    });
+  } catch (error) {
+    console.error('Get students error:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลนักเรียน' });
+  }
 });
 
 app.get('/api/teacher/assignments', (req, res) => {
@@ -111,51 +123,58 @@ app.get('/api/teacher/submissions', (req, res) => {
   });
 });
 
-// Mock student endpoints with JSON database
-const jsonDatabase = require('./backend/services/jsonDatabase');
+// Database is imported at the top
 
-app.get('/api/student/dashboard', async (req, res) => {
+app.get('/api/student/dashboard', authenticateStudent, async (req, res) => {
   try {
-    const studentId = req.headers.studentid || req.headers.studentId || '19450';
-    
-    const [subjects, assignments, submissions, students] = await Promise.all([
-      jsonDatabase.getSubjects(),
-      jsonDatabase.getAssignments(), 
-      jsonDatabase.getSubmissions(),
-      jsonDatabase.getStudents()
+    const [subjects, assignments, submissions] = await Promise.all([
+      supabaseDatabase.getSubjects(),
+      supabaseDatabase.getAssignments(), 
+      supabaseDatabase.getSubmissions()
     ]);
     
-    const student = students.find(s => s.studentId === studentId) || students[0];
-    const studentSubjects = subjects.filter(subject => subject.class === student.class);
+    const studentSubjects = subjects.filter(subject => subject.class === req.user.class);
     const studentAssignments = assignments.filter(assignment => 
-      studentSubjects.some(subject => subject.id === assignment.subjectId) && assignment.isActive === true
+      studentSubjects.some(subject => subject.id === assignment.subject_id) && assignment.is_active === true
     );
-    const studentSubmissions = submissions.filter(submission => submission.studentId === student.studentId);
+    const studentSubmissions = submissions.filter(submission => 
+      submission.students && submission.students.student_id === req.user.studentId
+    );
     
     const enrichedAssignments = studentAssignments.map(assignment => {
-      const subject = studentSubjects.find(s => s.id === assignment.subjectId);
-      const submission = studentSubmissions.find(s => s.assignmentId === assignment.id);
+      const subject = studentSubjects.find(s => s.id === assignment.subject_id);
+      const submission = studentSubmissions.find(s => s.assignment_id === assignment.id);
       
       return {
-        ...assignment,
+        id: assignment.id,
+        title: assignment.title,
+        description: assignment.description,
+        dueDate: assignment.due_date,
+        score: assignment.score,
         subjectName: subject ? subject.name : 'ไม่ทราบ',
         subjectClass: subject ? subject.class : 'ไม่ทราบ',
         isSubmitted: !!submission,
         submissionScore: submission ? submission.score : 0,
-        submittedAt: submission ? submission.submittedAt : null
+        submittedAt: submission ? submission.submitted_at : null
       };
     });
     
     res.json({
       success: true,
       student: {
-        studentId: student.studentId,
-        name: student.name,
-        class: student.class
+        studentId: req.user.studentId,
+        name: req.user.name,
+        class: req.user.class
       },
-      subjects: studentSubjects,
+      subjects: studentSubjects.map(s => ({ 
+        id: s.id, 
+        name: s.name, 
+        class: s.class,
+        maxScore: s.max_score,
+        totalAssignments: s.total_assignments
+      })),
       assignments: enrichedAssignments,
-      totalScore: studentSubmissions.reduce((sum, sub) => sum + sub.score, 0)
+      totalScore: studentSubmissions.reduce((sum, sub) => sum + (sub.score || 0), 0)
     });
   } catch (error) {
     console.error('Dashboard error:', error);

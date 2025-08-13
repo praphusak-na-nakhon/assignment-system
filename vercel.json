@@ -2,21 +2,23 @@
   "version": 2,
   "builds": [
     {
-      "src": "test-server.js",
+      "src": "supabase-server.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/test-server.js"
+      "dest": "/supabase-server.js"
     },
     {
       "src": "/(.*)",
-      "dest": "/test-server.js"
+      "dest": "/supabase-server.js"
     }
   ],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "SUPABASE_URL": "https://dsqcgrkvoyiqanzicpgz.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzcWNncmt2b3lpcWFuemljcGd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwOTkxNzksImV4cCI6MjA3MDY3NTE3OX0.YPbI4oz80Ukkgq-7EVnG9oK_tNpAOkzWlSizEJUNklw"
   }
 }
