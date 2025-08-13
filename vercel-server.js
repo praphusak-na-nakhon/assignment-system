@@ -169,6 +169,53 @@ const supabaseDatabase = {
   }
 };
 
+// Helper function to update subject assignment counts and scores
+const updateSubjectAssignmentCount = async (subjectId) => {
+  try {
+    console.log(`🧮 [Auto-Calc] Updating subject ${subjectId} assignment count...`);
+    
+    // Count assignments for this subject
+    const { count, error: countError } = await supabase
+      .from('assignments')
+      .select('*', { count: 'exact', head: true })
+      .eq('subject_id', subjectId);
+
+    if (countError) throw countError;
+
+    // Get subject max_score
+    const { data: subject, error: subjectError } = await supabase
+      .from('subjects')
+      .select('max_score')
+      .eq('id', subjectId)
+      .single();
+
+    if (subjectError) throw subjectError;
+
+    // Calculate score per assignment
+    const scorePerAssignment = count > 0 ? subject.max_score / count : 0;
+    
+    console.log(`🧮 [Auto-Calc] Subject: ${subjectId}, Assignments: ${count}, Max Score: ${subject.max_score}, Score per Assignment: ${scorePerAssignment}`);
+
+    // Update subject with new calculations
+    const { error: updateError } = await supabase
+      .from('subjects')
+      .update({
+        total_assignments: count,
+        score_per_assignment: scorePerAssignment
+      })
+      .eq('id', subjectId);
+
+    if (updateError) throw updateError;
+    
+    console.log(`✅ [Auto-Calc] Subject ${subjectId} updated successfully`);
+    
+    return { count, scorePerAssignment };
+  } catch (error) {
+    console.error('❌ [Auto-Calc] Error updating subject assignment count:', error);
+    throw error;
+  }
+};
+
 // CORS configuration
 app.use((req, res, next) => {
   const allowedOrigins = [
@@ -634,6 +681,9 @@ app.put('/api/teacher/subjects/:id', authenticateTeacher, async (req, res) => {
     
     if (error) throw error;
     
+    // Auto-calculate subject scores after updating max score
+    await updateSubjectAssignmentCount(id);
+    
     res.json({ success: true, data: updatedSubject });
   } catch (error) {
     console.error('Update subject error:', error);
@@ -772,6 +822,9 @@ app.post('/api/teacher/assignments', authenticateTeacher, async (req, res) => {
     
     if (error) throw error;
     
+    // Auto-calculate subject scores after creating assignment
+    await updateSubjectAssignmentCount(subjectId);
+    
     res.json({ success: true, data: newAssignment });
   } catch (error) {
     console.error('Create assignment error:', error);
@@ -811,12 +864,26 @@ app.delete('/api/teacher/assignments/:id', authenticateTeacher, async (req, res)
   try {
     const { id } = req.params;
     
+    // Get assignment info first for subject_id
+    const { data: assignment, error: getError } = await supabase
+      .from('assignments')
+      .select('subject_id')
+      .eq('id', id)
+      .single();
+    
+    if (getError) throw getError;
+    
     const { error } = await supabase
       .from('assignments')
       .delete()
       .eq('id', id);
     
     if (error) throw error;
+    
+    // Auto-calculate subject scores after deleting assignment
+    if (assignment) {
+      await updateSubjectAssignmentCount(assignment.subject_id);
+    }
     
     res.json({ success: true, message: 'ลบงานเรียบร้อยแล้ว' });
   } catch (error) {
