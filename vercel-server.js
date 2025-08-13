@@ -383,6 +383,7 @@ app.get('/api/student/dashboard', authenticateStudent, async (req, res) => {
         description: assignment.description,
         dueDate: assignment.due_date,
         score: assignment.score,
+        subjectId: assignment.subject_id,
         subjectName: subject ? subject.name : 'ไม่ทราบ',
         subjectClass: subject ? subject.class : 'ไม่ทราบ',
         isSubmitted: !!submission,
