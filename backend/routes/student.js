@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const { authenticateStudent } = require('../middlewares/auth');
-const sheetsService = require('../services/sheetsService');
+const jsonDatabase = require('../services/jsonDatabase');
 const driveService = require('../services/driveService');
 const { validateFileUpload } = require('../utils/validation');
 const { MAX_FILE_SIZE } = require('../config/constants');
@@ -35,9 +35,9 @@ router.post('/login', authenticateStudent, (req, res) => {
 // Get student's subjects and assignments
 router.get('/dashboard', authenticateStudent, async (req, res) => {
   try {
-    const subjects = await sheetsService.getSubjects();
-    const assignments = await sheetsService.getAssignments();
-    const submissions = await sheetsService.getSubmissions();
+    const subjects = await jsonDatabase.getSubjects();
+    const assignments = await jsonDatabase.getAssignments();
+    const submissions = await jsonDatabase.getSubmissions();
     
     // Filter subjects by student's class
     const studentSubjects = subjects.filter(subject => 
@@ -121,8 +121,8 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
     // Load minimal required data in parallel - only what's needed for validation
     console.log(`🔄 [${new Date().toISOString()}] Loading minimal data for validation...`);
     const [subjects, assignments] = await Promise.all([
-      sheetsService.getSubjects(),
-      sheetsService.getAssignments()
+      jsonDatabase.getSubjects(),
+      jsonDatabase.getAssignments()
     ]);
 
     const dataLoadTime = Date.now();
@@ -179,9 +179,9 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
       thumbnailUrl: fileResult.thumbnailUrl // เก็บ thumbnail สำหรับแสดงผล
     };
 
-    console.log(`📝 [${new Date().toISOString()}] Saving submission to Google Sheets...`);
-    // Use fast submission creation (background score processing)
-    await sheetsService.createSubmissionFast(submissionData);
+    console.log(`📝 [${new Date().toISOString()}] Saving submission to JSON database...`);
+    // Create submission in JSON database
+    await jsonDatabase.createSubmission(submissionData);
 
     const submissionSaveTime = Date.now();
     console.log(`✅ [${new Date().toISOString()}] Submission saved in ${submissionSaveTime - fileUploadTime}ms`);
@@ -206,8 +206,8 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
 // Get documents for download
 router.get('/documents', authenticateStudent, async (req, res) => {
   try {
-    const documents = await sheetsService.getDocuments();
-    const subjects = await sheetsService.getSubjects();
+    const documents = await jsonDatabase.getDocuments();
+    const subjects = await jsonDatabase.getSubjects();
     
     // Filter subjects by student's class
     const studentSubjects = subjects.filter(subject => 
@@ -239,10 +239,10 @@ router.get('/documents', authenticateStudent, async (req, res) => {
 router.get('/scores', authenticateStudent, async (req, res) => {
   try {
     const [subjects, assignments, submissions, students] = await Promise.all([
-      sheetsService.getSubjects(),
-      sheetsService.getAssignments(),
-      sheetsService.getSubmissions(),
-      sheetsService.getStudents()
+      jsonDatabase.getSubjects(),
+      jsonDatabase.getAssignments(),
+      jsonDatabase.getSubmissions(),
+      jsonDatabase.getStudents()
     ]);
     
     // Filter subjects by student's class

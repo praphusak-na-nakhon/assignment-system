@@ -111,21 +111,62 @@ app.get('/api/teacher/submissions', (req, res) => {
   });
 });
 
-// Mock student endpoints  
-app.get('/api/student/dashboard', (req, res) => {
-  res.json({
-    success: true,
-    student: { studentId: '19450', name: 'นักเรียน 19450', class: 'ม.1/1' },
-    subjects: [
-      { id: '1', name: 'วิทยาศาสตร์', class: 'ม.1/1' },
-      { id: '2', name: 'คณิตศาสตร์', class: 'ม.1/1' }
-    ],
-    assignments: [
-      { id: '1', title: 'การบ้านที่ 1', subjectName: 'วิทยาศาสตร์', dueDate: '2025-08-15', isSubmitted: false, submissionScore: 0 },
-      { id: '2', title: 'การบ้านที่ 2', subjectName: 'คณิตศาสตร์', dueDate: '2025-08-20', isSubmitted: false, submissionScore: 0 }
-    ],
-    totalScore: 0
-  });
+// Mock student endpoints with JSON database
+const jsonDatabase = require('./backend/services/jsonDatabase');
+
+app.get('/api/student/dashboard', async (req, res) => {
+  try {
+    const studentId = req.headers.studentid || req.headers.studentId || '19450';
+    
+    const [subjects, assignments, submissions, students] = await Promise.all([
+      jsonDatabase.getSubjects(),
+      jsonDatabase.getAssignments(), 
+      jsonDatabase.getSubmissions(),
+      jsonDatabase.getStudents()
+    ]);
+    
+    const student = students.find(s => s.studentId === studentId) || students[0];
+    const studentSubjects = subjects.filter(subject => subject.class === student.class);
+    const studentAssignments = assignments.filter(assignment => 
+      studentSubjects.some(subject => subject.id === assignment.subjectId) && assignment.isActive === true
+    );
+    const studentSubmissions = submissions.filter(submission => submission.studentId === student.studentId);
+    
+    const enrichedAssignments = studentAssignments.map(assignment => {
+      const subject = studentSubjects.find(s => s.id === assignment.subjectId);
+      const submission = studentSubmissions.find(s => s.assignmentId === assignment.id);
+      
+      return {
+        ...assignment,
+        subjectName: subject ? subject.name : 'ไม่ทราบ',
+        subjectClass: subject ? subject.class : 'ไม่ทราบ',
+        isSubmitted: !!submission,
+        submissionScore: submission ? submission.score : 0,
+        submittedAt: submission ? submission.submittedAt : null
+      };
+    });
+    
+    res.json({
+      success: true,
+      student: {
+        studentId: student.studentId,
+        name: student.name,
+        class: student.class
+      },
+      subjects: studentSubjects,
+      assignments: enrichedAssignments,
+      totalScore: studentSubmissions.reduce((sum, sub) => sum + sub.score, 0)
+    });
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    res.json({
+      success: true,
+      student: { studentId: '19450', name: 'นักเรียน 19450', class: 'ม.1/1' },
+      subjects: [],
+      assignments: [],
+      totalScore: 0
+    });
+  }
 });
 
 app.listen(PORT, '0.0.0.0', () => {

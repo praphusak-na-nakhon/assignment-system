@@ -1,5 +1,5 @@
 const { ADMIN_USERNAME, ADMIN_PASSWORD } = require('../config/constants');
-const sheetsService = require('../services/sheetsService');
+const jsonDatabase = require('../services/jsonDatabase');
 
 // Teacher Authentication
 const authenticateTeacher = (req, res, next) => {
@@ -36,7 +36,7 @@ const authenticateStudent = async (req, res, next) => {
   }
   
   try {
-    const students = await sheetsService.getStudents();
+    const students = await jsonDatabase.getStudents();
     
     // If we can't get students data, reject authentication
     if (!students || students.length === 0) {

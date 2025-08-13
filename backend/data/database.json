@@ -1,0 +1,139 @@
+{
+  "students": [
+    {
+      "id": "19450",
+      "studentId": "19450",
+      "name": "เด็กหญิงกัสนี บุตรโกบ",
+      "class": "ม.1/1",
+      "subjects": "",
+      "totalScore": 30
+    },
+    {
+      "id": "19451", 
+      "studentId": "19451",
+      "name": "เด็กหญิงกานต์ธิดา ตี้กุล",
+      "class": "ม.1/1",
+      "subjects": "",
+      "totalScore": 130
+    },
+    {
+      "id": "19452",
+      "studentId": "19452", 
+      "name": "เด็กหญิงจิณณพัด ชายกุล",
+      "class": "ม.1/1",
+      "subjects": "",
+      "totalScore": 0
+    },
+    {
+      "id": "19453",
+      "studentId": "19453",
+      "name": "เด็กชายจิรเดช แซ่หลี", 
+      "class": "ม.1/2",
+      "subjects": "",
+      "totalScore": 0
+    }
+  ],
+  "subjects": [
+    {
+      "id": "1754909265347",
+      "name": "การออกแบบและเทคโนโลยี",
+      "class": "ม.1/1",
+      "maxScore": 30,
+      "totalAssignments": 5,
+      "scorePerAssignment": 6,
+      "scoreSheetUrl": ""
+    },
+    {
+      "id": "1754909290859",
+      "name": "การออกแบบและเทคโนโลยี",
+      "class": "ม.1/2", 
+      "maxScore": 30,
+      "totalAssignments": 2,
+      "scorePerAssignment": 15,
+      "scoreSheetUrl": ""
+    },
+    {
+      "id": "1754930963791",
+      "name": "การเขียนโปรแกรมเบื้องต้น",
+      "class": "ม.1/1",
+      "maxScore": 30,
+      "totalAssignments": 0,
+      "scorePerAssignment": 0,
+      "scoreSheetUrl": ""
+    }
+  ],
+  "assignments": [
+    {
+      "id": "1754910001",
+      "subjectId": "1754909265347",
+      "title": "การบ้านที่ 1 - กลไกง่าย",
+      "description": "ออกแบบกลไกง่ายในชีวิตประจำวัน",
+      "dueDate": "2025-08-20",
+      "score": 6,
+      "isActive": true,
+      "createdAt": "2025-08-10T10:00:00.000Z"
+    },
+    {
+      "id": "1754910002", 
+      "subjectId": "1754909265347",
+      "title": "การบ้านที่ 2 - เฟือง",
+      "description": "เข้าใจระบบเฟืองและการทำงาน",
+      "dueDate": "2025-08-25",
+      "score": 6,
+      "isActive": true,
+      "createdAt": "2025-08-12T10:00:00.000Z"
+    },
+    {
+      "id": "1754910003",
+      "subjectId": "1754930963791", 
+      "title": "โปรแกรมแรก - Hello World",
+      "description": "เขียนโปรแกรม Hello World",
+      "dueDate": "2025-08-30",
+      "score": 10,
+      "isActive": true,
+      "createdAt": "2025-08-13T10:00:00.000Z"
+    }
+  ],
+  "submissions": [
+    {
+      "id": "sub001",
+      "studentId": "19450",
+      "assignmentId": "1754910001",
+      "subjectId": "1754909265347",
+      "fileName": "งาน1_19450.png",
+      "fileUrl": "https://example.com/file1.png",
+      "score": 6,
+      "submittedAt": "2025-08-11T15:30:00.000Z",
+      "cloudinaryId": "sample_id_1"
+    },
+    {
+      "id": "sub002",
+      "studentId": "19451",
+      "assignmentId": "1754910001", 
+      "subjectId": "1754909265347",
+      "fileName": "งาน1_19451.jpg",
+      "fileUrl": "https://example.com/file2.jpg", 
+      "score": 6,
+      "submittedAt": "2025-08-11T16:00:00.000Z",
+      "cloudinaryId": "sample_id_2"
+    }
+  ],
+  "documents": [
+    {
+      "id": "doc001",
+      "title": "เอกสารประกอบการเรียน ม.1",
+      "description": "เอกสารสำหรับนักเรียนม.1 ทุกคน",
+      "fileUrl": "https://example.com/doc1.pdf",
+      "subjectId": null,
+      "uploadedAt": "2025-08-01T10:00:00.000Z"
+    },
+    {
+      "id": "doc002", 
+      "title": "คู่มือการออกแบบ",
+      "description": "คู่มือสำหรับวิชาการออกแบบและเทคโนโลยี",
+      "fileUrl": "https://example.com/doc2.pdf",
+      "subjectId": "1754909265347",
+      "uploadedAt": "2025-08-05T10:00:00.000Z"
+    }
+  ]
+}
