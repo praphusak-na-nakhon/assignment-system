@@ -13,41 +13,15 @@ const app = express();
 // Trust proxy for Railway/production deployment
 app.set('trust proxy', 1);
 
-// Permissive CORS configuration for Railway deployment
-app.use((req, res, next) => {
-  // Always set CORS headers for frontend domains
-  const allowedOrigins = [
-    'http://localhost:3000', // Development
-    'https://wondrous-piroshki-96cc9e.netlify.app',
-    'https://assignment-system-one.vercel.app'
-  ];
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  } else {
-    res.header('Access-Control-Allow-Origin', '*');
-  }
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', '*');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '3600');
-  
-  // Handle preflight immediately
-  if (req.method === 'OPTIONS') {
-    console.log('OPTIONS request from:', req.headers.origin);
-    return res.status(200).end();
-  }
-  
-  next();
-});
+// CORS configuration
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://wondrous-piroshki-96cc9e.netlify.app',
+  'https://assignment-system-one.vercel.app'
+];
 
-// Additional CORS middleware as backup
 app.use(cors({
-  origin: [
-    'http://localhost:3000', // Development
-    'https://wondrous-piroshki-96cc9e.netlify.app',
-    'https://assignment-system-one.vercel.app'
-  ],
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'studentId', 'username', 'password']
@@ -79,27 +53,6 @@ app.get('/', (req, res) => {
     version: '1.0.1',
     timestamp: new Date().toISOString(),
     cors_configured: true
-  });
-});
-
-// Test CORS endpoint
-app.get('/test-cors', (req, res) => {
-  const allowedOrigins = [
-    'http://localhost:3000', // Development
-    'https://wondrous-piroshki-96cc9e.netlify.app',
-    'https://assignment-system-one.vercel.app'
-  ];
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  } else {
-    res.header('Access-Control-Allow-Origin', '*');
-  }
-  res.json({ 
-    success: true, 
-    message: 'CORS test successful',
-    origin: req.headers.origin,
-    timestamp: new Date().toISOString()
   });
 });
 

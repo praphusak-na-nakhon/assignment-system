@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }) => {
       
       if (response.data.success) {
         const authData = {
-          user: response.data.data,
+          user: response.data.user || response.data.data,
           userType: 'student',
         };
         

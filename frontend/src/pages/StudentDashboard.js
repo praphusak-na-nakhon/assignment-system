@@ -10,7 +10,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 const StudentDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -66,7 +66,7 @@ const StudentDashboard = () => {
     );
   }
 
-  const { student, subjects, assignments, totalScore } = dashboardData.data || dashboardData;
+  const { student, subjects, assignments } = dashboardData.data || dashboardData;
 
   return (
     <div className="min-h-screen bg-gray-50">

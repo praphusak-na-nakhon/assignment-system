@@ -19,7 +19,7 @@ const DownloadDocs = () => {
   const fetchDocuments = async () => {
     try {
       const response = await studentAPI.getDocuments();
-      setDocuments(response.data.data);
+      setDocuments(response.data.data || []);
     } catch (error) {
       toast.error('เกิดข้อผิดพลาดในการโหลดเอกสาร');
       console.error('Documents fetch error:', error);

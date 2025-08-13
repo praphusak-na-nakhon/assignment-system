@@ -31,7 +31,8 @@
       "Bash(git check-ignore:*)",
       "Bash(set PORT=3001)",
       "Bash(npx:*)",
-      "WebFetch(domain:wondrous-piroshki-96cc9e.netlify.app)"
+      "WebFetch(domain:wondrous-piroshki-96cc9e.netlify.app)",
+      "Bash(powershell:*)"
     ],
     "deny": []
   }

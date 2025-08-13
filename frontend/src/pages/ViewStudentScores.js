@@ -125,7 +125,6 @@ const ViewStudentScores = () => {
     // สร้าง data rows
     const dataRows = filteredStudents.map(student => {
       const { scoreData, totalScore, maxTotalScore } = getStudentScoreData(student);
-      const submittedCount = scoreData.filter(item => item.isSubmitted).length;
       const percentage = maxTotalScore > 0 ? (totalScore / maxTotalScore * 100).toFixed(1) : '0.0';
       
       return [
@@ -345,8 +344,7 @@ const ViewStudentScores = () => {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredStudents.map((student) => {
                         const { scoreData, totalScore, maxTotalScore } = getStudentScoreData(student);
-                        const submittedCount = scoreData.filter(item => item.isSubmitted).length;
-                        
+                                          
                         return (
                           <tr key={student.studentId} className="hover:bg-gray-50">
                             <td className="px-4 py-4 whitespace-nowrap text-center text-sm font-medium text-gray-900">

@@ -2,10 +2,10 @@
   "name": "assignment-submission-backend",
   "version": "1.0.0",
   "description": "Online Assignment Submission System Backend",
-  "main": "server.js",
+  "main": "supabase-server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node supabase-server.js",
+    "dev": "nodemon supabase-server.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.55.0",

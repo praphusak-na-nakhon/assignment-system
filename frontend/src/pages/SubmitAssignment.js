@@ -14,7 +14,7 @@ const SubmitAssignment = () => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const { user } = useAuth();
+  useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,11 +24,11 @@ const SubmitAssignment = () => {
   const fetchDashboardData = async () => {
     try {
       const response = await studentAPI.getDashboard();
-      const data = response.data.data;
+      const data = response.data;
       setDashboardData(data);
       
       // Auto-select subject if student has only one subject
-      if (data.subjects.length === 1) {
+      if (data.subjects && data.subjects.length === 1) {
         setSelectedSubject(data.subjects[0].id);
       }
     } catch (error) {
