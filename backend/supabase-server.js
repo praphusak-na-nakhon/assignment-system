@@ -435,19 +435,19 @@ app.post('/api/teacher/assignments', authenticateTeacher, async (req, res) => {
   try {
     const { subjectId, title, description, dueDate, score } = req.body;
     
-    if (!subjectId || !title || !description || !dueDate || score === undefined || score === null) {
+    if (!subjectId || !title || !dueDate) {
       return res.status(400).json({ 
         success: false, 
-        message: 'กรุณากรอกข้อมูลให้ครบถ้วน' 
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน (วิชา, ชื่องาน, กำหนดส่ง)' 
       });
     }
     
     const newAssignment = await supabaseDatabase.createAssignment({
       subjectId: subjectId,
       title,
-      description,
+      description: description || '',
       dueDate: dueDate,
-      score: parseInt(score)
+      score: score ? parseInt(score) : 0
     });
     
     res.json({ success: true, data: newAssignment });

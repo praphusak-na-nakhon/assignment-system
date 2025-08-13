@@ -742,13 +742,11 @@ app.post('/api/teacher/assignments', authenticateTeacher, async (req, res) => {
     
     console.log('Extracted fields:', { subjectId, title, description, dueDate, score });
     
-    // More flexible validation
+    // Validation - only required fields
     const missingFields = [];
     if (!subjectId) missingFields.push('subjectId');
     if (!title || title.trim() === '') missingFields.push('title');
-    if (!description || description.trim() === '') missingFields.push('description');
     if (!dueDate) missingFields.push('dueDate');
-    if (score === undefined || score === null || score === '') missingFields.push('score');
     
     if (missingFields.length > 0) {
       console.log('Validation failed. Missing fields:', missingFields);
@@ -764,9 +762,9 @@ app.post('/api/teacher/assignments', authenticateTeacher, async (req, res) => {
       .insert({
         subject_id: subjectId,
         title,
-        description,
+        description: description || '',
         due_date: dueDate,
-        score: parseInt(score),
+        score: score ? parseInt(score) : 0,
         is_active: true
       })
       .select()
