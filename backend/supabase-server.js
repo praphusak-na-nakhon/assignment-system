@@ -324,6 +324,64 @@ app.get('/api/teacher/assignments', authenticateTeacher, async (req, res) => {
   }
 });
 
+app.post('/api/teacher/assignments', authenticateTeacher, async (req, res) => {
+  try {
+    const { subjectId, title, description, dueDate, score } = req.body;
+    
+    if (!subjectId || !title || !description || !dueDate || !score) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน' 
+      });
+    }
+    
+    const newAssignment = await supabaseDatabase.createAssignment({
+      subjectId: subjectId,
+      title,
+      description,
+      dueDate: dueDate,
+      score: parseInt(score)
+    });
+    
+    res.json({ success: true, data: newAssignment });
+  } catch (error) {
+    console.error('Create assignment error:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการสร้างงาน' });
+  }
+});
+
+app.put('/api/teacher/assignments/:id', authenticateTeacher, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { subjectId, title, description, dueDate, score, isActive } = req.body;
+    
+    const updatedAssignment = await supabaseDatabase.updateAssignment(id, {
+      subject_id: subjectId,
+      title,
+      description,
+      due_date: dueDate,
+      score: parseInt(score),
+      is_active: isActive
+    });
+    
+    res.json({ success: true, data: updatedAssignment });
+  } catch (error) {
+    console.error('Update assignment error:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการอัปเดตงาน' });
+  }
+});
+
+app.delete('/api/teacher/assignments/:id', authenticateTeacher, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await supabaseDatabase.deleteAssignment(id);
+    res.json({ success: true, message: 'ลบงานเรียบร้อยแล้ว' });
+  } catch (error) {
+    console.error('Delete assignment error:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการลบงาน' });
+  }
+});
+
 app.get('/api/teacher/submissions', authenticateTeacher, async (req, res) => {
   try {
     const submissions = await supabaseDatabase.getSubmissions();
