@@ -17,6 +17,7 @@ app.set('trust proxy', 1);
 app.use((req, res, next) => {
   // Always set CORS headers for frontend domains
   const allowedOrigins = [
+    'http://localhost:3000', // Development
     'https://wondrous-piroshki-96cc9e.netlify.app',
     'https://assignment-system-one.vercel.app'
   ];
@@ -43,6 +44,7 @@ app.use((req, res, next) => {
 // Additional CORS middleware as backup
 app.use(cors({
   origin: [
+    'http://localhost:3000', // Development
     'https://wondrous-piroshki-96cc9e.netlify.app',
     'https://assignment-system-one.vercel.app'
   ],
@@ -83,6 +85,7 @@ app.get('/', (req, res) => {
 // Test CORS endpoint
 app.get('/test-cors', (req, res) => {
   const allowedOrigins = [
+    'http://localhost:3000', // Development
     'https://wondrous-piroshki-96cc9e.netlify.app',
     'https://assignment-system-one.vercel.app'
   ];

@@ -4,7 +4,17 @@ const PORT = process.env.PORT || 8080;
 
 // Simple CORS headers
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://wondrous-piroshki-96cc9e.netlify.app');
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://wondrous-piroshki-96cc9e.netlify.app',
+    'https://assignment-system-one.vercel.app'
+  ];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, username, password, studentId, studentid');
   if (req.method === 'OPTIONS') {
@@ -39,10 +49,15 @@ app.post('/api/student/login', (req, res) => {
     res.json({
       success: true,
       message: 'Student login successful',
-      user: { studentId: studentId, name: `Student ${studentId}` }
+      data: { 
+        studentId: studentId, 
+        name: `นักเรียน ${studentId}`,
+        class: 'ม.1/1',
+        subjects: []
+      }
     });
   } else {
-    res.status(400).json({ success: false, message: 'Student ID required' });
+    res.status(400).json({ success: false, message: 'กรุณาระบุเลขประจำตัวนักเรียน' });
   }
 });
 
@@ -53,10 +68,14 @@ app.get('/api/teacher/subjects', (req, res) => {
     res.json({
       success: true,
       message: 'Teacher login successful',
-      subjects: ['วิทยาศาสตร์', 'คณิตศาสตร์', 'ภาษาไทย']
+      data: [
+        { id: '1', name: 'วิทยาศาสตร์', class: 'ม.1/1', maxScore: 100, totalAssignments: 3 },
+        { id: '2', name: 'คณิตศาสตร์', class: 'ม.1/1', maxScore: 100, totalAssignments: 2 },
+        { id: '3', name: 'ภาษาไทย', class: 'ม.1/2', maxScore: 100, totalAssignments: 2 }
+      ]
     });
   } else {
-    res.status(401).json({ success: false, message: 'Authentication required' });
+    res.status(401).json({ success: false, message: 'กรุณาระบุชื่อผู้ใช้และรหัสผ่าน' });
   }
 });
 
@@ -64,9 +83,10 @@ app.get('/api/teacher/subjects', (req, res) => {
 app.get('/api/teacher/students', (req, res) => {
   res.json({
     success: true,
-    students: [
-      { id: '19450', name: 'นักเรียน A', class: 'ม.1/1' },
-      { id: '19451', name: 'นักเรียน B', class: 'ม.1/1' }
+    data: [
+      { id: '19450', studentId: '19450', name: 'เด็กหญิงกัสนี บุตรโกบ', class: 'ม.1/1', totalScore: 0 },
+      { id: '19451', studentId: '19451', name: 'เด็กหญิงกานต์ธิดา ตี้กุล', class: 'ม.1/1', totalScore: 0 },
+      { id: '19452', studentId: '19452', name: 'เด็กหญิงจิณณพัด ชายกุล', class: 'ม.1/2', totalScore: 0 }
     ]
   });
 });
@@ -91,16 +111,20 @@ app.get('/api/teacher/submissions', (req, res) => {
   });
 });
 
-// Mock student endpoints
+// Mock student endpoints  
 app.get('/api/student/dashboard', (req, res) => {
   res.json({
     success: true,
-    assignments: [
-      { id: 1, title: 'การบ้านที่ 1', subject: 'วิทยาศาสตร์', dueDate: '2025-08-15', status: 'pending' },
-      { id: 2, title: 'การบ้านที่ 2', subject: 'คณิตศาสตร์', dueDate: '2025-08-20', status: 'submitted' }
+    student: { studentId: '19450', name: 'นักเรียน 19450', class: 'ม.1/1' },
+    subjects: [
+      { id: '1', name: 'วิทยาศาสตร์', class: 'ม.1/1' },
+      { id: '2', name: 'คณิตศาสตร์', class: 'ม.1/1' }
     ],
-    totalAssignments: 2,
-    submittedAssignments: 1
+    assignments: [
+      { id: '1', title: 'การบ้านที่ 1', subjectName: 'วิทยาศาสตร์', dueDate: '2025-08-15', isSubmitted: false, submissionScore: 0 },
+      { id: '2', title: 'การบ้านที่ 2', subjectName: 'คณิตศาสตร์', dueDate: '2025-08-20', isSubmitted: false, submissionScore: 0 }
+    ],
+    totalScore: 0
   });
 });
 
