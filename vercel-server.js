@@ -197,17 +197,26 @@ const updateSubjectAssignmentCount = async (subjectId) => {
     console.log(`🧮 [Auto-Calc] Subject: ${subjectId}, Assignments: ${count}, Max Score: ${subject.max_score}, Score per Assignment: ${scorePerAssignment}`);
 
     // Update subject with new calculations
-    const { error: updateError } = await supabase
+    const { data: updatedData, error: updateError } = await supabase
       .from('subjects')
       .update({
         total_assignments: count,
         score_per_assignment: scorePerAssignment
       })
-      .eq('id', subjectId);
+      .eq('id', subjectId)
+      .select();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error(`❌ [Auto-Calc] Failed to update subject ${subjectId}:`, updateError);
+      throw updateError;
+    }
     
-    console.log(`✅ [Auto-Calc] Subject ${subjectId} updated successfully`);
+    if (!updatedData || updatedData.length === 0) {
+      console.warn(`⚠️ [Auto-Calc] No rows updated for subject ${subjectId} - subject may not exist`);
+    } else {
+      console.log(`📊 [Auto-Calc] Updated subject data:`, updatedData[0]);
+      console.log(`✅ [Auto-Calc] Subject ${subjectId} updated successfully - Score per assignment: ${scorePerAssignment}`);
+    }
     
     return { count, scorePerAssignment };
   } catch (error) {
