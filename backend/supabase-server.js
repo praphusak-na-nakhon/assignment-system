@@ -267,6 +267,35 @@ app.get('/api/student/scores', authenticateStudent, async (req, res) => {
   }
 });
 
+app.post('/api/student/submit', authenticateStudent, async (req, res) => {
+  try {
+    const { assignmentId, subjectId, fileName, fileUrl, cloudinaryId, thumbnailUrl } = req.body;
+    
+    if (!assignmentId || !subjectId || !fileName || !fileUrl) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน' 
+      });
+    }
+    
+    const newSubmission = await supabaseDatabase.createSubmission({
+      studentId: req.user.studentId,
+      assignmentId,
+      subjectId,
+      fileName,
+      fileUrl,
+      cloudinaryId,
+      thumbnailUrl,
+      score: 0 // Default score, teacher will update later
+    });
+    
+    res.json({ success: true, data: newSubmission });
+  } catch (error) {
+    console.error('Submit assignment error:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการส่งงาน' });
+  }
+});
+
 // Teacher Routes
 app.get('/api/teacher/subjects', authenticateTeacher, async (req, res) => {
   try {
@@ -286,6 +315,59 @@ app.get('/api/teacher/subjects', authenticateTeacher, async (req, res) => {
   }
 });
 
+app.post('/api/teacher/subjects', authenticateTeacher, async (req, res) => {
+  try {
+    const { name, class: className, maxScore } = req.body;
+    
+    if (!name || !className) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'กรุณากรอกชื่อวิชาและชั้นเรียน' 
+      });
+    }
+    
+    const newSubject = await supabaseDatabase.createSubject({
+      name,
+      class: className,
+      maxScore: parseInt(maxScore) || 100
+    });
+    
+    res.json({ success: true, data: newSubject });
+  } catch (error) {
+    console.error('Create subject error:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการสร้างวิชา' });
+  }
+});
+
+app.put('/api/teacher/subjects/:id', authenticateTeacher, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, class: className, maxScore } = req.body;
+    
+    const updatedSubject = await supabaseDatabase.updateSubject(id, {
+      name,
+      class: className,
+      max_score: parseInt(maxScore)
+    });
+    
+    res.json({ success: true, data: updatedSubject });
+  } catch (error) {
+    console.error('Update subject error:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการอัปเดตวิชา' });
+  }
+});
+
+app.delete('/api/teacher/subjects/:id', authenticateTeacher, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await supabaseDatabase.deleteSubject(id);
+    res.json({ success: true, message: 'ลบวิชาเรียบร้อยแล้ว' });
+  } catch (error) {
+    console.error('Delete subject error:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการลบวิชา' });
+  }
+});
+
 app.get('/api/teacher/students', authenticateTeacher, async (req, res) => {
   try {
     const students = await supabaseDatabase.getStudents();
@@ -300,6 +382,30 @@ app.get('/api/teacher/students', authenticateTeacher, async (req, res) => {
   } catch (error) {
     console.error('Get students error:', error);
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลนักเรียน' });
+  }
+});
+
+app.post('/api/teacher/students', authenticateTeacher, async (req, res) => {
+  try {
+    const { studentId, name, class: className } = req.body;
+    
+    if (!studentId || !name || !className) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'กรุณากรอกข้อมูลให้ครบถ้วน' 
+      });
+    }
+    
+    const newStudent = await supabaseDatabase.createStudent({
+      studentId,
+      name,
+      class: className
+    });
+    
+    res.json({ success: true, data: newStudent });
+  } catch (error) {
+    console.error('Create student error:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการเพิ่มนักเรียน' });
   }
 });
 
@@ -400,6 +506,41 @@ app.get('/api/teacher/submissions', authenticateTeacher, async (req, res) => {
   } catch (error) {
     console.error('Get submissions error:', error);
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลการส่งงาน' });
+  }
+});
+
+app.get('/api/teacher/documents', authenticateTeacher, async (req, res) => {
+  try {
+    const documents = await supabaseDatabase.getDocuments();
+    res.json({ success: true, data: documents });
+  } catch (error) {
+    console.error('Get documents error:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลเอกสาร' });
+  }
+});
+
+app.post('/api/teacher/documents', authenticateTeacher, async (req, res) => {
+  try {
+    const { title, description, fileUrl, subjectId } = req.body;
+    
+    if (!title || !fileUrl) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'กรุณากรอกชื่อเอกสารและไฟล์' 
+      });
+    }
+    
+    const newDocument = await supabaseDatabase.createDocument({
+      title,
+      description,
+      fileUrl,
+      subjectId: subjectId || null
+    });
+    
+    res.json({ success: true, data: newDocument });
+  } catch (error) {
+    console.error('Create document error:', error);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการอัปโหลดเอกสาร' });
   }
 });
 
