@@ -201,6 +201,11 @@ const updateSubjectAssignmentCount = async (subjectId) => {
     console.log(`🧮 [Auto-Calc] - Score per Assignment: ${scorePerAssignment} (type: ${typeof scorePerAssignment})`);
 
     // Update subject with new calculations
+    console.log(`🧮 [Auto-Calc] Attempting to update subject ${subjectId} with:`, {
+      total_assignments: count,
+      score_per_assignment: scorePerAssignment
+    });
+    
     const { data: updatedData, error: updateError } = await supabase
       .from('subjects')
       .update({
@@ -220,6 +225,22 @@ const updateSubjectAssignmentCount = async (subjectId) => {
     } else {
       console.log(`📊 [Auto-Calc] Updated subject data:`, updatedData[0]);
       console.log(`✅ [Auto-Calc] Subject ${subjectId} updated successfully - Score per assignment: ${scorePerAssignment}`);
+      
+      // Double-check by re-querying the database
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('subjects')
+        .select('total_assignments, score_per_assignment')
+        .eq('id', subjectId)
+        .single();
+      
+      if (!verifyError) {
+        console.log(`🔍 [Auto-Calc] Database verification - Current values:`, {
+          total_assignments: verifyData.total_assignments,
+          score_per_assignment: verifyData.score_per_assignment
+        });
+      } else {
+        console.error(`❌ [Auto-Calc] Failed to verify database update:`, verifyError);
+      }
     }
     
     return { count, scorePerAssignment };
