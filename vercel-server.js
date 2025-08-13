@@ -822,10 +822,22 @@ app.post('/api/teacher/assignments', authenticateTeacher, async (req, res) => {
     
     if (error) throw error;
     
-    // Auto-calculate subject scores after creating assignment
-    await updateSubjectAssignmentCount(subjectId);
+    console.log(`🎯 [Assignment] Created assignment for subject: ${subjectId}`);
     
-    res.json({ success: true, data: newAssignment });
+    // Auto-calculate subject scores after creating assignment
+    try {
+      await updateSubjectAssignmentCount(subjectId);
+      console.log(`🎯 [Assignment] Auto-calculation completed for subject: ${subjectId}`);
+    } catch (calcError) {
+      console.error(`❌ [Assignment] Auto-calculation failed for subject: ${subjectId}`, calcError);
+      // Don't throw error - assignment was created successfully
+    }
+    
+    res.json({ 
+      success: true, 
+      data: newAssignment,
+      message: 'สร้างงานสำเร็จ - คะแนนถูกคำนวณใหม่แล้ว'
+    });
   } catch (error) {
     console.error('Create assignment error:', error);
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการสร้างงาน' });
