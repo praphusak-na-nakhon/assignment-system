@@ -55,7 +55,7 @@ app.get('/', async (req, res) => {
   res.json({ 
     success: true, 
     message: 'Assignment System (Supabase Database)',
-    version: '3.0.1',
+    version: '3.1.0',
     timestamp: new Date().toISOString(),
     database: 'Supabase PostgreSQL',
     dbHealth: dbHealth
