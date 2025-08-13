@@ -736,23 +736,26 @@ app.get('/api/teacher/assignments', authenticateTeacher, async (req, res) => {
 
 app.post('/api/teacher/assignments', authenticateTeacher, async (req, res) => {
   try {
-    console.log('Assignment creation request body:', req.body);
+    console.log('Assignment creation request body:', JSON.stringify(req.body, null, 2));
+    console.log('Request body keys:', Object.keys(req.body));
     const { subjectId, title, description, dueDate, score } = req.body;
     
     console.log('Extracted fields:', { subjectId, title, description, dueDate, score });
     
-    if (!subjectId || !title || !description || !dueDate || score === undefined || score === null) {
-      console.log('Validation failed:', {
-        hasSubjectId: !!subjectId,
-        hasTitle: !!title,
-        hasDescription: !!description,
-        hasDueDate: !!dueDate,
-        scoreValue: score,
-        scoreType: typeof score
-      });
+    // More flexible validation
+    const missingFields = [];
+    if (!subjectId) missingFields.push('subjectId');
+    if (!title || title.trim() === '') missingFields.push('title');
+    if (!description || description.trim() === '') missingFields.push('description');
+    if (!dueDate) missingFields.push('dueDate');
+    if (score === undefined || score === null || score === '') missingFields.push('score');
+    
+    if (missingFields.length > 0) {
+      console.log('Validation failed. Missing fields:', missingFields);
+      console.log('All fields received:', { subjectId, title, description, dueDate, score });
       return res.status(400).json({ 
         success: false, 
-        message: 'กรุณากรอกข้อมูลให้ครบถ้วน' 
+        message: `กรุณากรอกข้อมูลให้ครบถ้วน (ขาด: ${missingFields.join(', ')})` 
       });
     }
     
