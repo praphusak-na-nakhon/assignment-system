@@ -435,7 +435,7 @@ app.post('/api/teacher/assignments', authenticateTeacher, async (req, res) => {
   try {
     const { subjectId, title, description, dueDate, score } = req.body;
     
-    if (!subjectId || !title || !description || !dueDate || !score) {
+    if (!subjectId || !title || !description || !dueDate || score === undefined || score === null) {
       return res.status(400).json({ 
         success: false, 
         message: 'กรุณากรอกข้อมูลให้ครบถ้วน' 
