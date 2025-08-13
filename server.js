@@ -15,8 +15,17 @@ app.set('trust proxy', 1);
 
 // Permissive CORS configuration for Railway deployment
 app.use((req, res, next) => {
-  // Always set CORS headers for Netlify domain
-  res.header('Access-Control-Allow-Origin', 'https://wondrous-piroshki-96cc9e.netlify.app');
+  // Always set CORS headers for frontend domains
+  const allowedOrigins = [
+    'https://wondrous-piroshki-96cc9e.netlify.app',
+    'https://assignment-system-one.vercel.app'
+  ];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', '*');
   res.header('Access-Control-Allow-Credentials', 'true');
@@ -33,7 +42,10 @@ app.use((req, res, next) => {
 
 // Additional CORS middleware as backup
 app.use(cors({
-  origin: 'https://wondrous-piroshki-96cc9e.netlify.app',
+  origin: [
+    'https://wondrous-piroshki-96cc9e.netlify.app',
+    'https://assignment-system-one.vercel.app'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'studentId', 'username', 'password']
@@ -70,7 +82,16 @@ app.get('/', (req, res) => {
 
 // Test CORS endpoint
 app.get('/test-cors', (req, res) => {
-  res.header('Access-Control-Allow-Origin', 'https://wondrous-piroshki-96cc9e.netlify.app');
+  const allowedOrigins = [
+    'https://wondrous-piroshki-96cc9e.netlify.app',
+    'https://assignment-system-one.vercel.app'
+  ];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
   res.json({ 
     success: true, 
     message: 'CORS test successful',
