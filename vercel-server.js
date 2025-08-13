@@ -194,7 +194,11 @@ const updateSubjectAssignmentCount = async (subjectId) => {
     // Calculate score per assignment
     const scorePerAssignment = count > 0 ? subject.max_score / count : 0;
     
-    console.log(`🧮 [Auto-Calc] Subject: ${subjectId}, Assignments: ${count}, Max Score: ${subject.max_score}, Score per Assignment: ${scorePerAssignment}`);
+    console.log(`🧮 [Auto-Calc] Subject: ${subjectId}`);
+    console.log(`🧮 [Auto-Calc] - Assignments count: ${count} (type: ${typeof count})`);
+    console.log(`🧮 [Auto-Calc] - Max Score: ${subject.max_score} (type: ${typeof subject.max_score})`);
+    console.log(`🧮 [Auto-Calc] - Calculation: ${subject.max_score} ÷ ${count} = ${scorePerAssignment}`);
+    console.log(`🧮 [Auto-Calc] - Score per Assignment: ${scorePerAssignment} (type: ${typeof scorePerAssignment})`);
 
     // Update subject with new calculations
     const { data: updatedData, error: updateError } = await supabase
@@ -834,9 +838,10 @@ app.post('/api/teacher/assignments', authenticateTeacher, async (req, res) => {
     console.log(`🎯 [Assignment] Created assignment for subject: ${subjectId}`);
     
     // Auto-calculate subject scores after creating assignment
+    let calcResult = null;
     try {
-      await updateSubjectAssignmentCount(subjectId);
-      console.log(`🎯 [Assignment] Auto-calculation completed for subject: ${subjectId}`);
+      calcResult = await updateSubjectAssignmentCount(subjectId);
+      console.log(`🎯 [Assignment] Auto-calculation completed for subject: ${subjectId}`, calcResult);
     } catch (calcError) {
       console.error(`❌ [Assignment] Auto-calculation failed for subject: ${subjectId}`, calcError);
       // Don't throw error - assignment was created successfully
@@ -845,7 +850,8 @@ app.post('/api/teacher/assignments', authenticateTeacher, async (req, res) => {
     res.json({ 
       success: true, 
       data: newAssignment,
-      message: 'สร้างงานสำเร็จ - คะแนนถูกคำนวณใหม่แล้ว'
+      message: `สร้างงานสำเร็จ${calcResult ? ` - คะแนนต่องาน: ${calcResult.scorePerAssignment.toFixed(2)}` : ' - คะแนนถูกคำนวณใหม่แล้ว'}`,
+      calculation: calcResult
     });
   } catch (error) {
     console.error('Create assignment error:', error);
