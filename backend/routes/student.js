@@ -1,8 +1,8 @@
 const express = require('express');
 const multer = require('multer');
 const { authenticateStudent } = require('../middlewares/auth');
-const jsonDatabase = require('../services/jsonDatabase');
-const driveService = require('../services/driveService');
+const supabaseDatabase = require('../services/supabaseDatabase');
+const cloudinaryService = require('../services/cloudinaryService');
 const { validateFileUpload } = require('../utils/validation');
 const { MAX_FILE_SIZE } = require('../config/constants');
 const fileManager = require('../utils/fileManager');
@@ -35,9 +35,9 @@ router.post('/login', authenticateStudent, (req, res) => {
 // Get student's subjects and assignments
 router.get('/dashboard', authenticateStudent, async (req, res) => {
   try {
-    const subjects = await jsonDatabase.getSubjects();
-    const assignments = await jsonDatabase.getAssignments();
-    const submissions = await jsonDatabase.getSubmissions();
+    const subjects = await supabaseDatabase.getSubjects();
+    const assignments = await supabaseDatabase.getAssignments();
+    const submissions = await supabaseDatabase.getSubmissions();
     
     // Filter subjects by student's class
     const studentSubjects = subjects.filter(subject => 
@@ -46,19 +46,19 @@ router.get('/dashboard', authenticateStudent, async (req, res) => {
     
     // Get assignments for student's subjects (only active assignments)
     const studentAssignments = assignments.filter(assignment => 
-      studentSubjects.some(subject => subject.id === assignment.subjectId) &&
+      studentSubjects.some(subject => subject.id === assignment.subject_id) &&
       assignment.isActive === true
     );
     
     // Get student's submissions
     const studentSubmissions = submissions.filter(submission => 
-      submission.studentId === req.user.studentId
+      submission.students?.student_id === req.user.studentId
     );
     
     // Enrich assignments with submission status
     const enrichedAssignments = studentAssignments.map(assignment => {
-      const subject = studentSubjects.find(s => s.id === assignment.subjectId);
-      const submission = studentSubmissions.find(s => s.assignmentId === assignment.id);
+      const subject = studentSubjects.find(s => s.id === assignment.subject_id);
+      const submission = studentSubmissions.find(s => s.assignment_id === assignment.id);
       
       return {
         ...assignment,
@@ -121,20 +121,20 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
     // Load minimal required data in parallel - only what's needed for validation
     console.log(`🔄 [${new Date().toISOString()}] Loading minimal data for validation...`);
     const [subjects, assignments] = await Promise.all([
-      jsonDatabase.getSubjects(),
-      jsonDatabase.getAssignments()
+      supabaseDatabase.getSubjects(),
+      supabaseDatabase.getAssignments()
     ]);
 
     const dataLoadTime = Date.now();
     console.log(`📊 [${new Date().toISOString()}] Validation data loaded in ${dataLoadTime - validationTime}ms`);
     
     const subject = subjects.find(s => s.id === subjectId);
-    const assignment = assignments.find(a => a.id === assignmentId);
+    const assignment = assignments.find(a => a.id === assignmentId && a.subject_id === subjectId);
     
     if (!subject || !assignment) {
       return res.status(400).json({ 
         success: false, 
-        message: 'ไม่พบข้อมูลงานหรือวิชาที่ระบุ' 
+        message: `ไม่พบข้อมูลงาน (assignmentId: ${assignmentId}) หรือวิชา (subjectId: ${subjectId}) ที่ระบุ` 
       });
     }
 
@@ -181,7 +181,7 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
 
     console.log(`📝 [${new Date().toISOString()}] Saving submission to JSON database...`);
     // Create submission in JSON database
-    await jsonDatabase.createSubmission(submissionData);
+    await supabaseDatabase.createSubmission(submissionData);
 
     const submissionSaveTime = Date.now();
     console.log(`✅ [${new Date().toISOString()}] Submission saved in ${submissionSaveTime - fileUploadTime}ms`);
@@ -206,8 +206,8 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
 // Get documents for download
 router.get('/documents', authenticateStudent, async (req, res) => {
   try {
-    const documents = await jsonDatabase.getDocuments();
-    const subjects = await jsonDatabase.getSubjects();
+    const documents = await supabaseDatabase.getDocuments();
+    const subjects = await supabaseDatabase.getSubjects();
     
     // Filter subjects by student's class
     const studentSubjects = subjects.filter(subject => 
@@ -215,13 +215,13 @@ router.get('/documents', authenticateStudent, async (req, res) => {
     );
     
     const availableDocuments = documents.filter(doc => 
-      !doc.subjectId || // General documents
-      studentSubjects.some(subject => subject.id === doc.subjectId)
+      !doc.subject_id || // General documents
+      studentSubjects.some(subject => subject.id === doc.subject_id)
     );
     
     // Enrich documents with subject name
     const enrichedDocuments = availableDocuments.map(doc => {
-      const subject = subjects.find(s => s.id === doc.subjectId);
+      const subject = subjects.find(s => s.id === doc.subject_id);
       return {
         ...doc,
         subjectName: subject ? subject.name : 'ทั่วไป'
@@ -239,10 +239,10 @@ router.get('/documents', authenticateStudent, async (req, res) => {
 router.get('/scores', authenticateStudent, async (req, res) => {
   try {
     const [subjects, assignments, submissions, students] = await Promise.all([
-      jsonDatabase.getSubjects(),
-      jsonDatabase.getAssignments(),
-      jsonDatabase.getSubmissions(),
-      jsonDatabase.getStudents()
+      supabaseDatabase.getSubjects(),
+      supabaseDatabase.getAssignments(),
+      supabaseDatabase.getSubmissions(),
+      supabaseDatabase.getStudents()
     ]);
     
     // Filter subjects by student's class
@@ -257,17 +257,17 @@ router.get('/scores', authenticateStudent, async (req, res) => {
 
     // Get assignments for student's subjects
     const studentAssignments = assignments.filter(assignment => 
-      studentSubjects.some(subject => subject.id === assignment.subjectId) &&
+      studentSubjects.some(subject => subject.id === assignment.subject_id) &&
       assignment.isActive === true
     );
 
     // Calculate scores for each subject (showing all students in class)
     const subjectScores = studentSubjects.map(subject => {
-      const subjectAssignments = studentAssignments.filter(a => a.subjectId === subject.id);
+      const subjectAssignments = studentAssignments.filter(a => a.subject_id === subject.id);
       
       // Get all submissions for this subject
       const subjectSubmissions = submissions.filter(s => 
-        subjectAssignments.some(a => a.id === s.assignmentId)
+        subjectAssignments.some(a => a.id === s.assignment_id)
       );
 
       const assignments = subjectAssignments
@@ -280,12 +280,12 @@ router.get('/scores', authenticateStudent, async (req, res) => {
 
       // Calculate scores for all students in class
       const studentScores = classStudents.map(student => {
-        const studentSubmissions = subjectSubmissions.filter(s => s.studentId === student.studentId);
+        const studentSubmissions = subjectSubmissions.filter(s => s.students?.student_id === student.student_id);
         
         const assignmentScores = assignments.map(assignment => {
-          const submission = studentSubmissions.find(s => s.assignmentId === assignment.assignmentId);
+          const submission = studentSubmissions.find(s => s.assignment_id === assignment.assignment_id);
           return {
-            assignmentId: assignment.assignmentId,
+            assignmentId: assignment.assignment_id,
             assignmentTitle: assignment.assignmentTitle,
             maxScore: assignment.maxScore,
             studentScore: submission ? submission.score : 0,
@@ -298,7 +298,7 @@ router.get('/scores', authenticateStudent, async (req, res) => {
         const maxTotalScore = assignmentScores.reduce((sum, item) => sum + item.maxScore, 0);
 
         return {
-          studentId: student.studentId,
+          studentId: student.student_id,
           studentName: student.name,
           class: student.class,
           assignments: assignmentScores,
