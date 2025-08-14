@@ -35,6 +35,7 @@
       "Bash(powershell:*)",
       "WebFetch(domain:assignment-system-one.vercel.app)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }

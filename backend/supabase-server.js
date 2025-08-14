@@ -73,6 +73,24 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
+// Test endpoint for debugging
+app.get('/api/test-score-update', async (req, res) => {
+  try {
+    await supabaseDatabase.testAssignmentScoreUpdate();
+    res.json({
+      success: true,
+      message: 'Test completed - check backend logs'
+    });
+  } catch (error) {
+    console.error('Test failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Test failed',
+      error: error.message
+    });
+  }
+});
+
 // Student Routes
 app.post('/api/student/login', authenticateStudent, (req, res) => {
   res.json({
@@ -446,8 +464,8 @@ app.post('/api/teacher/assignments', authenticateTeacher, async (req, res) => {
       subjectId: subjectId,
       title,
       description: description || '',
-      dueDate: dueDate,
-      score: score ? parseInt(score) : 0
+      dueDate: dueDate
+      // Don't pass score - let supabaseDatabase.createAssignment() use subject.max_score
     });
     
     res.json({ success: true, data: newAssignment });

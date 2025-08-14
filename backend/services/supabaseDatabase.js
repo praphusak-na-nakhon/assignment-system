@@ -117,6 +117,19 @@ class SupabaseDatabase {
   }
 
   async createAssignment(assignmentData) {
+    // Get subject max_score for initial assignment score calculation
+    const { data: subject, error: subjectError } = await supabase
+      .from('subjects')
+      .select('max_score')
+      .eq('id', assignmentData.subjectId)
+      .single();
+
+    if (subjectError) throw subjectError;
+
+    // For new assignments, use subject's max_score as initial score
+    // This will be redistributed later in updateSubjectAssignmentCount
+    const initialScore = assignmentData.score || subject.max_score;
+
     const { data, error } = await supabase
       .from('assignments')
       .insert({
@@ -124,7 +137,7 @@ class SupabaseDatabase {
         title: assignmentData.title,
         description: assignmentData.description || '',
         due_date: assignmentData.dueDate,
-        score: assignmentData.score || 10,
+        score: initialScore,
         is_active: true
       })
       .select()
@@ -132,8 +145,19 @@ class SupabaseDatabase {
     
     if (error) throw error;
 
-    // Update subject total_assignments and score_per_assignment
+    console.log(`📝 [Assignment Created] Initial score: ${initialScore}, Subject max_score: ${subject.max_score}`);
+
+    // Update subject total_assignments and redistribute scores
+    console.log(`🔄 [Assignment Created] Starting redistribution for subject ${assignmentData.subjectId}`);
     await this.updateSubjectAssignmentCount(assignmentData.subjectId);
+    
+    // Verify the final assignment score
+    const { data: finalAssignment } = await supabase
+      .from('assignments')
+      .select('score')
+      .eq('id', data.id)
+      .single();
+    console.log(`🔍 [Final Check] Assignment ${data.id} final score: ${finalAssignment?.score}`);
     
     return data;
   }
@@ -171,31 +195,210 @@ class SupabaseDatabase {
     }
   }
 
-  // Helper function to update subject assignment counts
+  // Fast delete for API responsiveness
+  async deleteAssignmentFast(id) {
+    console.log(`🗑️ [Fast Delete] Deleting assignment: ${id}`);
+    return this.deleteAssignment(id);
+  }
+
+  // Update subject scores manually
+  async updateSubjectScores(subjectId) {
+    console.log(`🔄 [Manual Update] Updating scores for subject: ${subjectId}`);
+    return this.updateSubjectAssignmentCount(subjectId);
+  }
+
+  // Helper function to update assignment scores and recalculate everything
   async updateSubjectAssignmentCount(subjectId) {
-    // Count assignments for this subject
-    const { count, error: countError } = await supabase
-      .from('assignments')
-      .select('*', { count: 'exact', head: true })
+    try {
+      console.log(`🔄 [Score Redistribution] Starting for subject ${subjectId}...`);
+      
+      // Count assignments for this subject
+      const { count, error: countError } = await supabase
+        .from('assignments')
+        .select('*', { count: 'exact', head: true })
+        .eq('subject_id', subjectId);
+
+      if (countError) {
+        console.error(`❌ [Score Redistribution] Count error:`, countError);
+        throw countError;
+      }
+
+      // Get subject max_score
+      const { data: subject, error: subjectError } = await supabase
+        .from('subjects')
+        .select('max_score')
+        .eq('id', subjectId)
+        .single();
+
+      if (subjectError) {
+        console.error(`❌ [Score Redistribution] Subject error:`, subjectError);
+        throw subjectError;
+      }
+
+      // Calculate new score per assignment (equal distribution)
+      const scorePerAssignment = count > 0 ? Math.round((subject.max_score / count) * 100) / 100 : 0;
+      
+      console.log(`📊 [Score Redistribution] Subject max_score: ${subject.max_score}, Total assignments: ${count}`);
+      console.log(`📊 [Score Redistribution] New score per assignment: ${scorePerAssignment}`);
+
+      // Update subject first
+      console.log(`🔄 [Score Redistribution] Updating subject...`);
+      await this.updateSubject(subjectId, {
+        total_assignments: count,
+        score_per_assignment: scorePerAssignment
+      });
+
+      // Update ALL assignments with new score
+      console.log(`🔄 [Score Redistribution] Updating all assignments...`);
+      await this.updateAllAssignmentScores(subjectId, scorePerAssignment);
+      
+      // Recalculate existing student scores based on new assignment scores
+      console.log(`🔄 [Score Redistribution] Recalculating student scores...`);
+      await this.recalculateStudentScores(subjectId, scorePerAssignment);
+      
+      console.log(`✅ [Score Redistribution] Completed for subject ${subjectId}`);
+    } catch (error) {
+      console.error(`❌ [Score Redistribution] Failed for subject ${subjectId}:`, error);
+      throw error;
+    }
+  }
+
+  // Update all assignment scores to new equal distribution
+  async updateAllAssignmentScores(subjectId, newScore) {
+    console.log(`📝 [Assignment Update] Setting all assignments to ${newScore} points for subject ${subjectId}...`);
+    
+    try {
+      // First, check what assignments exist for this subject
+      const { data: existingAssignments, error: checkError } = await supabase
+        .from('assignments')
+        .select('id, title, score, subject_id')
+        .eq('subject_id', subjectId);
+
+      if (checkError) {
+        console.error(`❌ [Assignment Update] Check error:`, checkError);
+        throw checkError;
+      }
+
+      console.log(`🔍 [Assignment Update] Found ${existingAssignments?.length || 0} assignments for subject ${subjectId}:`, existingAssignments);
+
+      if (!existingAssignments || existingAssignments.length === 0) {
+        console.log(`⚠️ [Assignment Update] No assignments found for subject ${subjectId}`);
+        return [];
+      }
+
+      // Now update them
+      const { data, error } = await supabase
+        .from('assignments')
+        .update({ score: newScore })
+        .eq('subject_id', subjectId)
+        .select('id, title, score');
+
+      if (error) {
+        console.error(`❌ [Assignment Update] Update error:`, error);
+        throw error;
+      }
+
+      console.log(`✅ [Assignment Update] Updated ${data?.length || 0} assignments:`, data);
+      return data;
+    } catch (error) {
+      console.error(`❌ [Assignment Update] Failed to update assignments for subject ${subjectId}:`, error);
+      throw error;
+    }
+  }
+
+  // Recalculate student scores based on new assignment score distribution
+  async recalculateStudentScores(subjectId, newAssignmentScore) {
+    try {
+      console.log(`🧮 [Student Score Recalc] Starting for subject ${subjectId}...`);
+      
+      // Get all assignments for this subject
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('assignments')
+        .select('id')
+        .eq('subject_id', subjectId);
+
+      if (assignmentsError) throw assignmentsError;
+
+      // Get all submissions for this subject with original scores
+      const { data: submissions, error: submissionsError } = await supabase
+        .from('submissions')
+        .select('id, student_id, assignment_id, score')
+        .eq('subject_id', subjectId);
+
+      if (submissionsError) throw submissionsError;
+
+      console.log(`📊 [Student Score Recalc] Found ${submissions.length} submissions to recalculate`);
+
+      // Update each submission score proportionally
+      for (const submission of submissions) {
+        // Since we've already updated all assignments to newAssignmentScore,
+        // calculate the percentage and apply to new score
+        let newSubmissionScore;
+        if (newAssignmentScore > 0) {
+          // Keep the same percentage score as before
+          const scorePercentage = submission.score / newAssignmentScore;
+          newSubmissionScore = Math.round(scorePercentage * newAssignmentScore * 100) / 100;
+        } else {
+          newSubmissionScore = 0;
+        }
+
+        // Update submission with new calculated score
+        await supabase
+          .from('submissions')
+          .update({ score: newSubmissionScore })
+          .eq('id', submission.id);
+
+        console.log(`📝 [Submission Update] Assignment ${submission.assignment_id}: ${submission.score} → ${newSubmissionScore} (${newAssignmentScore} points max)`);
+      }
+
+      // Recalculate total scores for all students in this subject
+      await this.updateStudentTotalScores(subjectId);
+
+      console.log(`✅ [Student Score Recalc] Completed for subject ${subjectId}`);
+    } catch (error) {
+      console.error('❌ Error recalculating student scores:', error);
+    }
+  }
+
+
+  // Update student total scores based on their submissions
+  async updateStudentTotalScores(subjectId) {
+    console.log(`🔢 [Total Score Update] Calculating totals for subject ${subjectId}...`);
+    
+    // Get all submissions grouped by student
+    const { data: submissions, error } = await supabase
+      .from('submissions')
+      .select('student_id, score')
       .eq('subject_id', subjectId);
 
-    if (countError) throw countError;
+    if (error) throw error;
 
-    // Get subject max_score
-    const { data: subject, error: subjectError } = await supabase
-      .from('subjects')
-      .select('max_score')
-      .eq('id', subjectId)
-      .single();
-
-    if (subjectError) throw subjectError;
-
-    // Update subject
-    const scorePerAssignment = count > 0 ? subject.max_score / count : 0;
-    await this.updateSubject(subjectId, {
-      total_assignments: count,
-      score_per_assignment: scorePerAssignment
+    // Group by student and calculate totals
+    const studentTotals = {};
+    submissions.forEach(submission => {
+      if (!studentTotals[submission.student_id]) {
+        studentTotals[submission.student_id] = 0;
+      }
+      studentTotals[submission.student_id] += submission.score || 0;
     });
+
+    // Update each student's total score
+    for (const [studentUuid, totalScore] of Object.entries(studentTotals)) {
+      const { data: student } = await supabase
+        .from('students')
+        .select('student_id')
+        .eq('id', studentUuid)
+        .single();
+
+      if (student) {
+        await this.updateStudent(student.student_id, {
+          total_score: Math.round(totalScore * 100) / 100
+        });
+        console.log(`📊 [Total Score] Student ${student.student_id}: ${totalScore}`);
+      }
+    }
+
+    console.log(`✅ [Total Score Update] Updated ${Object.keys(studentTotals).length} students`);
   }
 
   // Submissions
@@ -352,6 +555,34 @@ class SupabaseDatabase {
     
     if (error) throw error;
     return data;
+  }
+
+  // Test function for debugging assignment score updates
+  async testAssignmentScoreUpdate() {
+    try {
+      console.log('🧪 [TEST] Starting assignment score update test...');
+      
+      // Get first subject
+      const { data: subjects, error: subjectsError } = await supabase
+        .from('subjects')
+        .select('id, name, max_score')
+        .limit(1);
+      
+      if (subjectsError || !subjects?.length) {
+        console.log('❌ [TEST] No subjects found');
+        return;
+      }
+      
+      const subject = subjects[0];
+      console.log(`🧪 [TEST] Testing with subject: ${subject.name} (max_score: ${subject.max_score})`);
+      
+      // Manually call updateSubjectAssignmentCount
+      await this.updateSubjectAssignmentCount(subject.id);
+      
+      console.log('✅ [TEST] Test completed');
+    } catch (error) {
+      console.error('❌ [TEST] Test failed:', error);
+    }
   }
 
   // Health check

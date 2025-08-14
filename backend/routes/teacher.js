@@ -1,8 +1,8 @@
 const express = require('express');
 const multer = require('multer');
 const { authenticateTeacher } = require('../middlewares/auth');
-const jsonDatabase = require('../services/jsonDatabase');
-const driveService = require('../services/driveService');
+const supabaseDatabase = require('../services/supabaseDatabase');
+const cloudinaryService = require('../services/cloudinaryService');
 const { validateSubjectData, validateAssignmentData, validateFileUpload } = require('../utils/validation');
 const { MAX_FILE_SIZE } = require('../config/constants');
 const fileManager = require('../utils/fileManager');
@@ -23,7 +23,7 @@ router.use(authenticateTeacher);
 // Subjects Management
 router.get('/subjects', async (req, res) => {
   try {
-    const subjects = await jsonDatabase.getSubjects();
+    const subjects = await supabaseDatabase.getSubjects();
     res.json({ success: true, data: subjects });
   } catch (error) {
     console.error('Get subjects error:', error);
@@ -41,7 +41,7 @@ router.post('/subjects', async (req, res) => {
       });
     }
 
-    await jsonDatabase.createSubject(req.body);
+    await supabaseDatabase.createSubject(req.body);
     
     // สร้างโฟลเดอร์สำหรับวิชานี้
     await fileManager.createSubjectFolder(req.body.name, req.body.class);
@@ -63,7 +63,7 @@ router.put('/subjects/:id', async (req, res) => {
       });
     }
 
-    await jsonDatabase.updateSubject(req.params.id, req.body);
+    await supabaseDatabase.updateSubject(req.params.id, req.body);
     res.json({ success: true, message: 'แก้ไขวิชาเรียบร้อยแล้ว' });
   } catch (error) {
     console.error('Update subject error:', error);
@@ -74,10 +74,10 @@ router.put('/subjects/:id', async (req, res) => {
 router.delete('/subjects/:id', async (req, res) => {
   try {
     // ดึงข้อมูลวิชาก่อนลบเพื่อใช้ลบโฟลเดอร์
-    const subjects = await jsonDatabase.getSubjects();
+    const subjects = await supabaseDatabase.getSubjects();
     const subject = subjects.find(s => s.id === req.params.id);
     
-    await jsonDatabase.deleteSubject(req.params.id);
+    await supabaseDatabase.deleteSubject(req.params.id);
     
     // ลบโฟลเดอร์และไฟล์ทั้งหมดของวิชานี้
     if (subject) {
@@ -94,7 +94,7 @@ router.delete('/subjects/:id', async (req, res) => {
 // Students Management
 router.get('/students', async (req, res) => {
   try {
-    const students = await jsonDatabase.getStudents();
+    const students = await supabaseDatabase.getStudents();
     res.json({ success: true, data: students });
   } catch (error) {
     console.error('Get students error:', error);
@@ -104,7 +104,7 @@ router.get('/students', async (req, res) => {
 
 router.post('/students', async (req, res) => {
   try {
-    await jsonDatabase.createStudent(req.body);
+    await supabaseDatabase.createStudent(req.body);
     res.json({ success: true, message: 'เพิ่มนักเรียนเรียบร้อยแล้ว' });
   } catch (error) {
     console.error('Create student error:', error);
@@ -115,8 +115,8 @@ router.post('/students', async (req, res) => {
 // Assignments Management
 router.get('/assignments', async (req, res) => {
   try {
-    const assignments = await jsonDatabase.getAssignments();
-    const subjects = await jsonDatabase.getSubjects();
+    const assignments = await supabaseDatabase.getAssignments();
+    const subjects = await supabaseDatabase.getSubjects();
     
     // Filter out assignments that don't have a valid subject (subject was deleted)
     const validAssignments = assignments.filter(assignment => {
@@ -151,14 +151,14 @@ router.post('/assignments', async (req, res) => {
     }
 
     // Start the creation process (don't wait for score updates)
-    const createPromise = jsonDatabase.createAssignmentFast(req.body);
+    const createPromise = supabaseDatabase.createAssignment(req.body);
     
     // Respond immediately after the assignment is created
     await createPromise;
     
     // สร้างโฟลเดอร์สำหรับงานนี้
     // ดึงข้อมูลวิชาเพื่อใช้สร้างโฟลเดอร์
-    const subjects = await jsonDatabase.getSubjects();
+    const subjects = await supabaseDatabase.getSubjects();
     const subject = subjects.find(s => s.id === req.body.subjectId);
     
     if (subject) {
@@ -193,7 +193,7 @@ router.put('/assignments/:id', async (req, res) => {
       });
     }
 
-    await jsonDatabase.updateAssignment(req.params.id, req.body);
+    await supabaseDatabase.updateAssignment(req.params.id, req.body);
     res.json({ success: true, message: 'แก้ไขงานเรียบร้อยแล้ว' });
   } catch (error) {
     console.error('Update assignment error:', error);
@@ -204,14 +204,14 @@ router.put('/assignments/:id', async (req, res) => {
 router.delete('/assignments/:id', async (req, res) => {
   try {
     // ดึงข้อมูลงานก่อนลบเพื่อใช้ลบโฟลเดอร์
-    const assignments = await jsonDatabase.getAssignments();
+    const assignments = await supabaseDatabase.getAssignments();
     const assignment = assignments.find(a => a.id === req.params.id);
     
-    await jsonDatabase.deleteAssignmentFast(req.params.id);
+    await supabaseDatabase.deleteAssignmentFast(req.params.id);
     
     // ลบโฟลเดอร์และไฟล์ทั้งหมดของงานนี้
     if (assignment) {
-      const subjects = await jsonDatabase.getSubjects();
+      const subjects = await supabaseDatabase.getSubjects();
       const subject = subjects.find(s => s.id === assignment.subjectId);
       
       if (subject) {
@@ -239,7 +239,7 @@ router.delete('/assignments/:id', async (req, res) => {
 // Documents Management
 router.get('/documents', async (req, res) => {
   try {
-    const documents = await jsonDatabase.getDocuments();
+    const documents = await supabaseDatabase.getDocuments();
     res.json({ success: true, data: documents });
   } catch (error) {
     console.error('Get documents error:', error);
@@ -258,23 +258,23 @@ router.post('/documents', upload.single('file'), async (req, res) => {
       return res.status(400).json({ success: false, message: fileValidation.message });
     }
 
-    // Upload to Google Drive
-    const uploadResult = await driveService.uploadFile(
+    // Upload to Cloudinary
+    const uploadResult = await cloudinaryService.uploadDocument(
       req.file.buffer,
       req.file.originalname,
-      req.file.mimetype
+      'documents'
     );
 
-    // Save document info to sheets
+    // Save document info to database
     const documentData = {
       title: req.body.title || req.file.originalname,
       description: req.body.description || '',
       category: req.body.category || '',
       subjectId: req.body.subjectId || '',
-      fileUrl: uploadResult.url
+      fileUrl: uploadResult.secure_url
     };
 
-    await jsonDatabase.createDocument(documentData);
+    await supabaseDatabase.createDocument(documentData);
     
     res.json({ 
       success: true, 
@@ -290,9 +290,9 @@ router.post('/documents', upload.single('file'), async (req, res) => {
 // Submissions
 router.get('/submissions', async (req, res) => {
   try {
-    const submissions = await jsonDatabase.getSubmissions();
-    const students = await jsonDatabase.getStudents();
-    const assignments = await jsonDatabase.getAssignments();
+    const submissions = await supabaseDatabase.getSubmissions();
+    const students = await supabaseDatabase.getStudents();
+    const assignments = await supabaseDatabase.getAssignments();
     
     const enrichedSubmissions = submissions.map(submission => {
       const student = students.find(s => s.studentId === submission.studentId);
@@ -326,7 +326,7 @@ router.put('/subjects/:id/score', async (req, res) => {
 
     // This would require implementing updateSubject method in sheetsService
     // For now, let's trigger score recalculation
-    await jsonDatabase.updateSubjectScores(req.params.id);
+    await supabaseDatabase.updateSubjectScores(req.params.id);
     
     res.json({ success: true, message: 'อัปเดตการตั้งค่าคะแนนเรียบร้อยแล้ว' });
   } catch (error) {

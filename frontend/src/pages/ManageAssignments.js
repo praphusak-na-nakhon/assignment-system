@@ -25,8 +25,7 @@ const ManageAssignments = () => {
     title: '',
     description: '',
     subjectId: '',
-    dueDate: '',
-    score: 0
+    dueDate: ''
   });
 
   useEffect(() => {
@@ -87,8 +86,7 @@ const ManageAssignments = () => {
     try {
       setSubmitting(true);
       const data = {
-        ...formData,
-        score: parseFloat(formData.score) || 0
+        ...formData
       };
 
       if (editingAssignment) {
@@ -150,7 +148,6 @@ const ManageAssignments = () => {
       description: assignment.description || '',
       subjectId: assignment.subjectId || '',
       dueDate: assignment.dueDate ? assignment.dueDate.split('T')[0] : '',
-      score: assignment.score || 0
     });
     setShowModal(true);
   };
@@ -197,8 +194,7 @@ const ManageAssignments = () => {
       title: '',
       description: '',
       subjectId: '',
-      dueDate: '',
-      score: 0
+      dueDate: ''
     });
   };
 
@@ -247,7 +243,10 @@ const ManageAssignments = () => {
               >
                 {loading ? 'โหลด...' : '🔄 รีเฟรช'}
               </Button>
-              <Button onClick={() => setShowModal(true)}>
+              <Button 
+                onClick={() => setShowModal(true)}
+                title="คะแนนจะปรับอัตโนมัติให้รวมเท่ากับคะแนนเต็มของวิชา"
+              >
                 เพิ่มงานใหม่
               </Button>
             </div>
@@ -315,8 +314,13 @@ const ManageAssignments = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {formatDate(assignment.dueDate)}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {assignment.score || 0} คะแนน
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {assignment.score || 0} คะแนน
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              (ปรับอัตโนมัติ)
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {formatDate(assignment.createdAt)}
@@ -350,6 +354,7 @@ const ManageAssignments = () => {
                   <Button 
                     className="mt-4"
                     onClick={() => setShowModal(true)}
+                    title="คะแนนจะปรับอัตโนมัติให้รวมเท่ากับคะแนนเต็มของวิชา"
                   >
                     เพิ่มงานแรก
                   </Button>
@@ -416,34 +421,35 @@ const ManageAssignments = () => {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                กำหนดส่ง
-              </label>
-              <input
-                type="date"
-                name="dueDate"
-                value={formData.dueDate}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              กำหนดส่ง
+            </label>
+            <input
+              type="date"
+              name="dueDate"
+              value={formData.dueDate}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                คะแนนเต็ม (ไม่บังคับ - ระบบจะคำนวณอัตโนมัติ)
-              </label>
-              <input
-                type="number"
-                name="score"
-                value={formData.score}
-                onChange={handleInputChange}
-                min="0"
-                step="0.01"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="0"
-              />
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">
+                  การปรับคะแนนอัตโนมัติ
+                </h3>
+                <div className="mt-2 text-sm text-blue-700">
+                  <p>ระบบจะปรับคะแนนทุกงานในวิชาให้มีคะแนนเท่ากัน โดยรวมแล้วจะเท่ากับคะแนนเต็มของวิชา</p>
+                  <p className="mt-1"><strong>ตอนนี้:</strong> จำนวนงาน × คะแนนเฉลี่ย = คะแนนเต็มวิชา</p>
+                </div>
+              </div>
             </div>
           </div>
 
