@@ -286,34 +286,6 @@ app.get('/api/student/scores', authenticateStudent, async (req, res) => {
   }
 });
 
-app.post('/api/student/submit', authenticateStudent, async (req, res) => {
-  try {
-    const { assignmentId, subjectId, fileName, fileUrl, cloudinaryId, thumbnailUrl } = req.body;
-    
-    if (!assignmentId || !subjectId || !fileName || !fileUrl) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'กรุณากรอกข้อมูลให้ครบถ้วน' 
-      });
-    }
-    
-    const newSubmission = await supabaseDatabase.createSubmission({
-      studentId: req.user.studentId,
-      assignmentId,
-      subjectId,
-      fileName,
-      fileUrl,
-      cloudinaryId,
-      thumbnailUrl,
-      score: 0 // Default score, teacher will update later
-    });
-    
-    res.json({ success: true, data: newSubmission });
-  } catch (error) {
-    console.error('Submit assignment error:', error);
-    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการส่งงาน' });
-  }
-});
 
 // Teacher Routes
 app.get('/api/teacher/subjects', authenticateTeacher, async (req, res) => {
