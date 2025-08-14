@@ -47,7 +47,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // Import Supabase services
 const supabaseDatabase = require('./services/supabaseDatabase');
-const { authenticateTeacher, authenticateStudent } = require('./middlewares/supabaseAuth');
+const { authenticateTeacher, authenticateStudent } = require('./middlewares/auth');
+
+// Import route modules
+const studentRoutes = require('./routes/student');
+const teacherRoutes = require('./routes/teacher');
 
 // Health check
 app.get('/', async (req, res) => {
@@ -61,6 +65,10 @@ app.get('/', async (req, res) => {
     dbHealth: dbHealth
   });
 });
+
+// Use route modules
+app.use('/api/student', studentRoutes);
+app.use('/api/teacher', teacherRoutes);
 
 // Health check
 app.get('/api/health', async (req, res) => {
@@ -105,7 +113,8 @@ app.post('/api/student/login', authenticateStudent, (req, res) => {
   });
 });
 
-app.get('/api/student/dashboard', authenticateStudent, async (req, res) => {
+// Student routes are now handled by routes/student.js module
+/* app.get('/api/student/dashboard', authenticateStudent, async (req, res) => {
   try {
     const [subjects, assignments, submissions] = await Promise.all([
       supabaseDatabase.getSubjects(),
@@ -167,9 +176,9 @@ app.get('/api/student/dashboard', authenticateStudent, async (req, res) => {
     console.error('Dashboard error:', error);
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูล' });
   }
-});
+}); */
 
-app.get('/api/student/documents', authenticateStudent, async (req, res) => {
+/* app.get('/api/student/documents', authenticateStudent, async (req, res) => {
   try {
     const [documents, subjects] = await Promise.all([
       supabaseDatabase.getDocuments(),
@@ -199,9 +208,9 @@ app.get('/api/student/documents', authenticateStudent, async (req, res) => {
     console.error('Get documents error:', error);
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลเอกสาร' });
   }
-});
+}); */
 
-app.get('/api/student/scores', authenticateStudent, async (req, res) => {
+/* app.get('/api/student/scores', authenticateStudent, async (req, res) => {
   try {
     const [subjects, assignments, submissions, students] = await Promise.all([
       supabaseDatabase.getSubjects(),
@@ -284,7 +293,7 @@ app.get('/api/student/scores', authenticateStudent, async (req, res) => {
     console.error('Get score data error:', error);
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลคะแนน' });
   }
-});
+}); */
 
 
 // Teacher Routes
