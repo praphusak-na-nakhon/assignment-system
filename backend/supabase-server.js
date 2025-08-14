@@ -67,8 +67,29 @@ app.get('/', async (req, res) => {
 });
 
 // Use route modules
-app.use('/api/student', studentRoutes);
-app.use('/api/teacher', teacherRoutes);
+try {
+  app.use('/api/student', studentRoutes);
+  app.use('/api/teacher', teacherRoutes);
+  console.log('✅ Route modules loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load route modules:', error);
+}
+
+// Fallback student submit route (if routes/student.js fails to load)
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10485760 } });
+
+app.post('/api/student/submit', authenticateStudent, upload.single('file'), async (req, res) => {
+  console.log('🔄 [FALLBACK] Student submit route called');
+  console.log('📊 [FALLBACK] Request body:', req.body);
+  console.log('📁 [FALLBACK] File:', req.file ? { name: req.file.originalname, size: req.file.size } : 'No file');
+  console.log('👤 [FALLBACK] User:', req.user);
+  
+  return res.status(500).json({ 
+    success: false, 
+    message: 'Fallback route - routes/student.js failed to load properly' 
+  });
+});
 
 // Health check
 app.get('/api/health', async (req, res) => {
