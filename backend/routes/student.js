@@ -110,7 +110,7 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
       console.log(`❌ [DEBUG] Missing required fields - assignmentId: ${assignmentId}, subjectId: ${subjectId}`);
       return res.status(400).json({ 
         success: false, 
-        message: 'กรุณาระบุงานและวิชาที่ต้องการส่ง' 
+        message: `กรุณาระบุงานและวิชาที่ต้องการส่ง - Debug: assignmentId=${assignmentId}, subjectId=${subjectId}` 
       });
     }
 
@@ -118,7 +118,7 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
       console.log(`❌ [DEBUG] No file uploaded`);
       return res.status(400).json({ 
         success: false, 
-        message: 'กรุณาเลือกไฟล์ที่ต้องการส่ง' 
+        message: 'กรุณาเลือกไฟล์ที่ต้องการส่ง - Debug: No file detected' 
       });
     }
 
@@ -134,7 +134,7 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
       console.log(`❌ [DEBUG] Invalid user data:`, req.user);
       return res.status(400).json({ 
         success: false, 
-        message: 'ไม่พบข้อมูลผู้ใช้ กรุณาล็อกอินใหม่' 
+        message: `ไม่พบข้อมูลผู้ใช้ กรุณาล็อกอินใหม่ - Debug: user=${JSON.stringify(req.user)}` 
       });
     }
 
@@ -157,7 +157,7 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
     if (!subject || !assignment) {
       return res.status(400).json({ 
         success: false, 
-        message: `ไม่พบข้อมูลงาน (assignmentId: ${assignmentId}) หรือวิชา (subjectId: ${subjectId}) ที่ระบุ` 
+        message: `ไม่พบข้อมูลงาน (assignmentId: ${assignmentId}) หรือวิชา (subjectId: ${subjectId}) ที่ระบุ - Debug: subject=${!!subject}, assignment=${!!assignment}, totalSubjects=${subjects?.length}, totalAssignments=${assignments?.length}` 
       });
     }
 
