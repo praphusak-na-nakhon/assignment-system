@@ -92,10 +92,22 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
   const startTime = Date.now();
   console.log(`📤 [${new Date().toISOString()}] Student ${req.user.studentId} starting submission process...`);
   
+  // Debug logging for request data
+  console.log(`🔍 [DEBUG] Request body:`, req.body);
+  console.log(`🔍 [DEBUG] Request file:`, req.file ? { 
+    originalname: req.file.originalname,
+    mimetype: req.file.mimetype,
+    size: req.file.size 
+  } : 'No file');
+  console.log(`🔍 [DEBUG] User data:`, req.user);
+  
   try {
     const { assignmentId, subjectId } = req.body;
     
+    console.log(`🔍 [DEBUG] Extracted values - assignmentId: ${assignmentId}, subjectId: ${subjectId}`);
+    
     if (!assignmentId || !subjectId) {
+      console.log(`❌ [DEBUG] Missing required fields - assignmentId: ${assignmentId}, subjectId: ${subjectId}`);
       return res.status(400).json({ 
         success: false, 
         message: 'กรุณาระบุงานและวิชาที่ต้องการส่ง' 
@@ -103,6 +115,7 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
     }
 
     if (!req.file) {
+      console.log(`❌ [DEBUG] No file uploaded`);
       return res.status(400).json({ 
         success: false, 
         message: 'กรุณาเลือกไฟล์ที่ต้องการส่ง' 
@@ -112,7 +125,17 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
     // Validate file
     const fileValidation = validateFileUpload(req.file);
     if (!fileValidation.isValid) {
+      console.log(`❌ [DEBUG] File validation failed:`, fileValidation.message);
       return res.status(400).json({ success: false, message: fileValidation.message });
+    }
+    console.log(`✅ [DEBUG] File validation passed`);
+    
+    if (!req.user || !req.user.studentId) {
+      console.log(`❌ [DEBUG] Invalid user data:`, req.user);
+      return res.status(400).json({ 
+        success: false, 
+        message: 'ไม่พบข้อมูลผู้ใช้ กรุณาล็อกอินใหม่' 
+      });
     }
 
     const validationTime = Date.now();
