@@ -16,7 +16,7 @@ const getAuthHeaders = () => {
   
   try {
     const parsedData = JSON.parse(authData);
-    console.log('Parsed auth data:', parsedData); // Debug log
+    // console.log('Parsed auth data:', parsedData); // Debug log (commented out to reduce noise)
     
     const { user, userType } = parsedData;
     
