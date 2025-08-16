@@ -87,7 +87,7 @@ const SubmitAssignment = () => {
     
     // Set timeout for upload
     const uploadTimeout = setTimeout(() => {
-      setUploading(false);
+      setSubmitting(false);
       setUploadProgress(0);
       setUploadStage('error');
       toast.error('การอัปโหลดใช้เวลานานเกินไป กรุณาลองใหม่');
