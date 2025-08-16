@@ -1,3 +1,6 @@
+// Load environment variables first
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -50,20 +53,52 @@ const supabaseDatabase = require('./services/supabaseDatabase');
 const { authenticateTeacher, authenticateStudent } = require('./middlewares/auth');
 
 // Import route modules
-const studentRoutes = require('./routes/student');
-const teacherRoutes = require('./routes/teacher');
+let studentRoutes, teacherRoutes;
+try {
+  studentRoutes = require('./routes/student');
+  teacherRoutes = require('./routes/teacher');
+  console.log('✅ Route modules imported successfully');
+} catch (error) {
+  console.error('❌ Failed to import route modules:', error);
+  // Create fallback empty routers
+  const express = require('express');
+  studentRoutes = express.Router();
+  teacherRoutes = express.Router();
+}
 
 // Health check
 app.get('/', async (req, res) => {
-  const dbHealth = await supabaseDatabase.healthCheck();
-  res.json({ 
-    success: true, 
-    message: 'Assignment System (Supabase Database)',
-    version: '3.1.0',
-    timestamp: new Date().toISOString(),
-    database: 'Supabase PostgreSQL',
-    dbHealth: dbHealth
-  });
+  try {
+    const dbHealth = await supabaseDatabase.healthCheck();
+    res.json({ 
+      success: true, 
+      message: 'Assignment System (Supabase Database)',
+      version: '3.2.0',
+      timestamp: new Date().toISOString(),
+      database: 'Supabase PostgreSQL',
+      dbHealth: dbHealth,
+      env: {
+        nodeEnv: process.env.NODE_ENV,
+        hasSupabaseUrl: !!process.env.SUPABASE_URL,
+        hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY
+      }
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.json({ 
+      success: true, 
+      message: 'Assignment System (Supabase Database)',
+      version: '3.2.0',
+      timestamp: new Date().toISOString(),
+      database: 'Supabase PostgreSQL',
+      dbHealth: { status: 'error', connection: 'failed', error: error.message },
+      env: {
+        nodeEnv: process.env.NODE_ENV,
+        hasSupabaseUrl: !!process.env.SUPABASE_URL,
+        hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY
+      }
+    });
+  }
 });
 
 // Use route modules
