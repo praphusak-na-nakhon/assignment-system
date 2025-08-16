@@ -310,13 +310,13 @@ class SupabaseDatabase {
         throw updateSubjectError;
       }
 
-      // Update ALL assignments with new score
-      console.log(`🔄 [Score Redistribution] Updating all assignments...`);
-      await this.updateAllAssignmentScores(subjectId, scorePerAssignment);
-      
-      // Recalculate existing student scores based on new assignment scores
+      // Recalculate existing student scores BEFORE updating assignment scores
       console.log(`🔄 [Score Redistribution] Recalculating student scores...`);
       await this.recalculateStudentScores(subjectId, scorePerAssignment);
+      
+      // Update ALL assignments with new score AFTER student score recalculation
+      console.log(`🔄 [Score Redistribution] Updating all assignments...`);
+      await this.updateAllAssignmentScores(subjectId, scorePerAssignment);
       
       console.log(`✅ [Score Redistribution] Completed for subject ${subjectId}`);
     } catch (error) {
@@ -373,19 +373,25 @@ class SupabaseDatabase {
     try {
       console.log(`🧮 [Student Score Recalc] Starting for subject ${subjectId}...`);
       
-      // Get all assignments for this subject
+      // Get all assignments for this subject with their CURRENT scores (before update)
       const { data: assignments, error: assignmentsError } = await supabase
         .from('assignments')
-        .select('id')
+        .select('id, score')
         .eq('subject_id', subjectId);
 
       if (assignmentsError) throw assignmentsError;
 
-      // Get all submissions for this subject with original scores
+      // Create a map of assignment ID to OLD score for percentage calculation
+      const oldAssignmentScores = {};
+      assignments.forEach(assignment => {
+        oldAssignmentScores[assignment.id] = assignment.score;
+      });
+
+      // Get all submissions for these assignments
       const { data: submissions, error: submissionsError } = await supabase
         .from('submissions')
         .select('id, student_id, assignment_id, score')
-        .eq('subject_id', subjectId);
+        .in('assignment_id', assignments.map(a => a.id));
 
       if (submissionsError) throw submissionsError;
 
@@ -393,29 +399,31 @@ class SupabaseDatabase {
 
       // Update each submission score proportionally
       for (const submission of submissions) {
-        // Since we've already updated all assignments to newAssignmentScore,
-        // calculate the percentage and apply to new score
         let newSubmissionScore;
-        if (newAssignmentScore > 0 && submission.score >= 0) {
-          // Keep the same percentage score as before
-          const oldAssignmentScore = existingAssignments.find(a => a.id === submission.assignment_id)?.score || 1;
-          if (oldAssignmentScore > 0) {
-            const scorePercentage = submission.score / oldAssignmentScore;
-            newSubmissionScore = Math.round(scorePercentage * newAssignmentScore * 100) / 100;
-          } else {
-            newSubmissionScore = Math.min(submission.score, newAssignmentScore);
-          }
+        const oldAssignmentScore = oldAssignmentScores[submission.assignment_id];
+        
+        if (newAssignmentScore > 0 && submission.score >= 0 && oldAssignmentScore > 0) {
+          // Calculate the percentage score the student achieved
+          const scorePercentage = submission.score / oldAssignmentScore;
+          // Apply the same percentage to the new assignment score
+          newSubmissionScore = Math.round(scorePercentage * newAssignmentScore * 100) / 100;
+          // Make sure it doesn't exceed the new max score
+          newSubmissionScore = Math.min(newSubmissionScore, newAssignmentScore);
         } else {
           newSubmissionScore = 0;
         }
 
         // Update submission with new calculated score
-        await supabase
+        const { error: updateError } = await supabase
           .from('submissions')
           .update({ score: newSubmissionScore })
           .eq('id', submission.id);
 
-        console.log(`📝 [Submission Update] Assignment ${submission.assignment_id}: ${submission.score} → ${newSubmissionScore} (${newAssignmentScore} points max)`);
+        if (updateError) {
+          console.error(`❌ [Submission Update] Error updating submission ${submission.id}:`, updateError);
+        } else {
+          console.log(`📝 [Submission Update] Assignment ${submission.assignment_id}: ${submission.score}/${oldAssignmentScore} → ${newSubmissionScore}/${newAssignmentScore} (${Math.round((submission.score/oldAssignmentScore) * 100)}%)`);
+        }
       }
 
       // Recalculate total scores for all students in this subject
