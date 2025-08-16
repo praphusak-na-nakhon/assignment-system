@@ -14,6 +14,8 @@ const SubmitAssignment = () => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStage, setUploadStage] = useState(''); // 'uploading', 'processing', 'saving'
   useAuth();
   const navigate = useNavigate();
 
@@ -80,15 +82,47 @@ const SubmitAssignment = () => {
     formData.append('subjectId', selectedSubject);
 
     setSubmitting(true);
+    setUploadProgress(0);
+    setUploadStage('uploading');
+    
+    // Set timeout for upload
+    const uploadTimeout = setTimeout(() => {
+      setUploading(false);
+      setUploadProgress(0);
+      setUploadStage('error');
+      toast.error('การอัปโหลดใช้เวลานานเกินไป กรุณาลองใหม่');
+    }, 300000); // 5 minutes timeout
+    
     try {
-      const response = await studentAPI.submitAssignment(formData);
+      const response = await studentAPI.submitAssignment(formData, (progressEvent) => {
+        if (progressEvent.lengthComputable) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+          
+          if (percentCompleted === 100) {
+            setUploadStage('processing');
+          }
+        }
+      });
+      
+      clearTimeout(uploadTimeout);
+      
+      setUploadStage('saving');
+      
       if (response.data.success) {
+        setUploadProgress(100);
+        setUploadStage('completed');
         toast.success(response.data.message, { duration: 5000 });
-        // Navigate immediately without waiting for background processing
-        navigate('/student/dashboard');
+        
+        // Wait a bit to show completion before navigating
+        setTimeout(() => {
+          navigate('/student/dashboard');
+        }, 1500);
       }
     } catch (error) {
+      clearTimeout(uploadTimeout); // Clear timeout on error
       console.error('Submit error:', error);
+      setUploadStage('error');
       
       // Handle timeout errors specially
       if (error.code === 'ECONNABORTED') {
@@ -99,6 +133,11 @@ const SubmitAssignment = () => {
       }
     } finally {
       setSubmitting(false);
+      // Reset progress after a delay
+      setTimeout(() => {
+        setUploadProgress(0);
+        setUploadStage('');
+      }, 3000);
     }
   };
 
@@ -260,6 +299,34 @@ const SubmitAssignment = () => {
                   )}
                 </div>
 
+                {/* Upload Progress */}
+                {submitting && (
+                  <div className="space-y-3">
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div
+                        className={`h-2.5 rounded-full transition-all duration-300 ${
+                          uploadStage === 'error' ? 'bg-red-500' : 
+                          uploadStage === 'completed' ? 'bg-green-500' : 'bg-blue-500'
+                        }`}
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">
+                        {uploadStage === 'uploading' && 'กำลังอัปโหลดไฟล์...'}
+                        {uploadStage === 'processing' && 'กำลังประมวลผลไฟล์...'}
+                        {uploadStage === 'saving' && 'กำลังบันทึกข้อมูล...'}
+                        {uploadStage === 'completed' && 'ส่งงานสำเร็จ!'}
+                        {uploadStage === 'error' && 'เกิดข้อผิดพลาด'}
+                        {!uploadStage && 'เตรียมส่งงาน...'}
+                      </span>
+                      <span className="text-gray-500 font-mono">
+                        {uploadProgress}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Submit Button */}
                 <div className="flex space-x-4">
                   <Button
@@ -268,16 +335,16 @@ const SubmitAssignment = () => {
                     loading={submitting}
                     disabled={!selectedAssignment || !file}
                   >
-                    {submitting ? 'กำลังส่งงาน...' : 'ส่งงาน'}
+                    {submitting ? 
+                      (uploadStage === 'uploading' ? `กำลังอัปโหลด... ${uploadProgress}%` :
+                       uploadStage === 'processing' ? 'กำลังประมวลผล...' :
+                       uploadStage === 'saving' ? 'กำลังบันทึก...' :
+                       uploadStage === 'completed' ? 'ส่งงานสำเร็จ!' :
+                       'กำลังส่งงาน...') : 
+                      'ส่งงาน'
+                    }
                   </Button>
                 </div>
-                {submitting && (
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-600 text-center">
-                      กำลังอัปโหลดไฟล์และบันทึกข้อมูล กรุณารอสักครู่...
-                    </p>
-                  </div>
-                )}
               </form>
             </Card.Body>
           </Card>

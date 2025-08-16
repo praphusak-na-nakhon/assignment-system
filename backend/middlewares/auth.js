@@ -71,7 +71,7 @@ const authenticateStudent = async (req, res, next) => {
       studentId: student.student_id,
       name: student.name,
       class: student.class,
-      subjects: student.subjects ? student.subjects.split(',') : []
+      subjects: [] // Students get subjects based on their class, not stored directly
     };
     next();
   } catch (error) {

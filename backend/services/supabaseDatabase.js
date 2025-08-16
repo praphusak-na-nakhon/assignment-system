@@ -77,6 +77,22 @@ class SupabaseDatabase {
   }
 
   async updateSubject(id, updates) {
+    console.log(`🔄 [Supabase] Updating subject ${id} with:`, updates);
+    
+    // First check if the subject exists
+    const { data: existingSubject, error: selectError } = await supabase
+      .from('subjects')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (selectError) {
+      console.error(`❌ [Supabase] Subject not found:`, selectError);
+      throw new Error(`Subject with ID ${id} not found`);
+    }
+    
+    console.log(`📋 [Supabase] Existing subject:`, existingSubject);
+    
     const { data, error } = await supabase
       .from('subjects')
       .update(updates)
@@ -84,7 +100,18 @@ class SupabaseDatabase {
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error(`❌ [Supabase] Update subject error:`, error);
+      console.error(`❌ [Supabase] Error details:`, {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      throw error;
+    }
+    
+    console.log(`✅ [Supabase] Subject updated successfully:`, data);
     return data;
   }
 
@@ -163,6 +190,22 @@ class SupabaseDatabase {
   }
 
   async updateAssignment(id, updates) {
+    console.log(`🔄 [Supabase] Updating assignment ${id} with:`, updates);
+    
+    // First check if the assignment exists
+    const { data: existingAssignment, error: selectError } = await supabase
+      .from('assignments')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (selectError) {
+      console.error(`❌ [Supabase] Assignment not found:`, selectError);
+      throw new Error(`Assignment with ID ${id} not found`);
+    }
+    
+    console.log(`📋 [Supabase] Existing assignment:`, existingAssignment);
+    
     const { data, error } = await supabase
       .from('assignments')
       .update(updates)
@@ -170,7 +213,18 @@ class SupabaseDatabase {
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error(`❌ [Supabase] Update assignment error:`, error);
+      console.error(`❌ [Supabase] Error details:`, {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      throw error;
+    }
+    
+    console.log(`✅ [Supabase] Assignment updated successfully:`, data);
     return data;
   }
 
@@ -235,18 +289,26 @@ class SupabaseDatabase {
         throw subjectError;
       }
 
-      // Calculate new score per assignment (equal distribution)
-      const scorePerAssignment = count > 0 ? Math.round((subject.max_score / count) * 100) / 100 : 0;
+      // Calculate new score per assignment (equal distribution) - use integers only
+      const scorePerAssignment = count > 0 ? Math.round(subject.max_score / count) : 0;
       
       console.log(`📊 [Score Redistribution] Subject max_score: ${subject.max_score}, Total assignments: ${count}`);
       console.log(`📊 [Score Redistribution] New score per assignment: ${scorePerAssignment}`);
 
-      // Update subject first
+      // Update subject first - direct database call to avoid recursion
       console.log(`🔄 [Score Redistribution] Updating subject...`);
-      await this.updateSubject(subjectId, {
-        total_assignments: count,
-        score_per_assignment: scorePerAssignment
-      });
+      const { error: updateSubjectError } = await supabase
+        .from('subjects')
+        .update({
+          total_assignments: count,
+          score_per_assignment: scorePerAssignment
+        })
+        .eq('id', subjectId);
+      
+      if (updateSubjectError) {
+        console.error(`❌ [Score Redistribution] Subject update error:`, updateSubjectError);
+        throw updateSubjectError;
+      }
 
       // Update ALL assignments with new score
       console.log(`🔄 [Score Redistribution] Updating all assignments...`);
@@ -334,10 +396,15 @@ class SupabaseDatabase {
         // Since we've already updated all assignments to newAssignmentScore,
         // calculate the percentage and apply to new score
         let newSubmissionScore;
-        if (newAssignmentScore > 0) {
+        if (newAssignmentScore > 0 && submission.score >= 0) {
           // Keep the same percentage score as before
-          const scorePercentage = submission.score / newAssignmentScore;
-          newSubmissionScore = Math.round(scorePercentage * newAssignmentScore * 100) / 100;
+          const oldAssignmentScore = existingAssignments.find(a => a.id === submission.assignment_id)?.score || 1;
+          if (oldAssignmentScore > 0) {
+            const scorePercentage = submission.score / oldAssignmentScore;
+            newSubmissionScore = Math.round(scorePercentage * newAssignmentScore * 100) / 100;
+          } else {
+            newSubmissionScore = Math.min(submission.score, newAssignmentScore);
+          }
         } else {
           newSubmissionScore = 0;
         }
@@ -392,7 +459,7 @@ class SupabaseDatabase {
 
       if (student) {
         await this.updateStudent(student.student_id, {
-          total_score: Math.round(totalScore * 100) / 100
+          total_score: Math.round(totalScore)
         });
         console.log(`📊 [Total Score] Student ${student.student_id}: ${totalScore}`);
       }

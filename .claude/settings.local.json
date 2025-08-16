@@ -33,7 +33,8 @@
       "Bash(npx:*)",
       "WebFetch(domain:wondrous-piroshki-96cc9e.netlify.app)",
       "Bash(powershell:*)",
-      "WebFetch(domain:assignment-system-one.vercel.app)"
+      "WebFetch(domain:assignment-system-one.vercel.app)",
+      "Bash(del test-update.js)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

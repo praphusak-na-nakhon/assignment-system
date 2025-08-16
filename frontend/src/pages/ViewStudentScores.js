@@ -75,22 +75,24 @@ const ViewStudentScores = () => {
   };
 
   const getStudentScoreData = (student) => {
-    const studentSubmissions = submissions.filter(s => s.studentId === student.studentId);
+    // Use student_id with underscore (from Supabase)
+    const studentSubmissions = submissions.filter(s => s.students?.student_id === student.student_id);
     const subjectAssignments = selectedSubject 
-      ? assignments.filter(a => a.subjectId === selectedSubject && a.isActive)
-      : assignments.filter(a => a.isActive);
+      ? assignments.filter(a => a.subject_id === selectedSubject && (a.is_active !== false))
+      : assignments.filter(a => a.is_active !== false);
     
     const scoreData = subjectAssignments
-      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)) // Sort by creation date
+      .sort((a, b) => new Date(a.created_at || a.createdAt) - new Date(b.created_at || b.createdAt)) // Sort by creation date
       .map(assignment => {
-        const submission = studentSubmissions.find(s => s.assignmentId === assignment.id);
+        // Use assignment_id with underscore (from Supabase)
+        const submission = studentSubmissions.find(s => s.assignment_id === assignment.id);
         return {
           assignmentId: assignment.id,
           assignmentTitle: assignment.title,
           maxScore: assignment.score || 0,
           studentScore: submission ? submission.score : 0,
           isSubmitted: !!submission,
-          submittedAt: submission ? submission.submittedAt : null
+          submittedAt: submission ? submission.submitted_at || submission.submittedAt : null
         };
       });
 
@@ -128,7 +130,7 @@ const ViewStudentScores = () => {
       const percentage = maxTotalScore > 0 ? (totalScore / maxTotalScore * 100).toFixed(1) : '0.0';
       
       return [
-        student.studentId,
+        student.student_id || student.studentId,
         student.name,
         student.class,
         ...scoreData.map(assignment => assignment.isSubmitted ? assignment.studentScore : ''),
@@ -324,7 +326,7 @@ const ViewStudentScores = () => {
                         {selectedClass && selectedSubject && filteredStudents.length > 0 && (() => {
                           const { scoreData } = getStudentScoreData(filteredStudents[0]);
                           return scoreData.map((assignment, index) => (
-                            <th key={assignment.assignmentId} className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">
+                            <th key={assignment.assignmentTitle || assignment.assignmentId || index} className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">
                               <div className="flex flex-col items-center">
                                 <div className="truncate max-w-[70px]" title={assignment.assignmentTitle}>
                                   {assignment.assignmentTitle}
@@ -346,9 +348,9 @@ const ViewStudentScores = () => {
                         const { scoreData, totalScore, maxTotalScore } = getStudentScoreData(student);
                                           
                         return (
-                          <tr key={student.studentId} className="hover:bg-gray-50">
+                          <tr key={`student-${student.student_id || student.studentId || 'unknown'}`} className="hover:bg-gray-50">
                             <td className="px-4 py-4 whitespace-nowrap text-center text-sm font-medium text-gray-900">
-                              {student.studentId}
+                              {student.student_id || student.studentId}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-left text-sm text-gray-900">
                               {student.name}
@@ -357,8 +359,8 @@ const ViewStudentScores = () => {
                               {student.class}
                             </td>
                             {/* Individual assignment scores */}
-                            {scoreData.map((assignment) => (
-                              <td key={assignment.assignmentId} className="px-3 py-4 text-center text-sm">
+                            {scoreData.map((assignment, index) => (
+                              <td key={`${student.student_id || student.studentId}-${assignment.assignmentTitle || assignment.assignmentId || index}`} className="px-3 py-4 text-center text-sm">
                                 <div className="flex flex-col items-center">
                                   <div className={`font-medium ${
                                     assignment.isSubmitted ? 'text-gray-900' : 'text-gray-400'

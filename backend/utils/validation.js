@@ -37,6 +37,8 @@ const validateStudentId = (studentId) => {
 const validateSubjectData = (subject) => {
   const errors = [];
 
+  console.log(`🔍 [Validation] Input data:`, subject);
+
   if (!subject.name || subject.name.trim() === '') {
     errors.push('กรุณาระบุชื่อวิชา');
   }
@@ -45,10 +47,15 @@ const validateSubjectData = (subject) => {
     errors.push('กรุณาระบุระดับชั้น');
   }
 
-  if (subject.maxScore && (isNaN(subject.maxScore) || subject.maxScore <= 0)) {
-    errors.push('คะแนนเต็มต้องเป็นตัวเลขที่มากกว่า 0');
+  if (subject.maxScore) {
+    console.log(`🔍 [Validation] maxScore value: ${subject.maxScore}, type: ${typeof subject.maxScore}, isNaN: ${isNaN(subject.maxScore)}`);
+    if (isNaN(subject.maxScore) || Number(subject.maxScore) <= 0) {
+      errors.push('คะแนนเต็มต้องเป็นตัวเลขที่มากกว่า 0');
+    }
   }
 
+  console.log(`🔍 [Validation] Errors:`, errors);
+  
   return {
     isValid: errors.length === 0,
     messages: errors

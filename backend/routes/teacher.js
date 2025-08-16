@@ -55,18 +55,60 @@ router.post('/subjects', async (req, res) => {
 
 router.put('/subjects/:id', async (req, res) => {
   try {
-    const validation = validateSubjectData(req.body);
-    if (!validation.isValid) {
-      return res.status(400).json({ 
-        success: false, 
-        message: validation.messages.join(', ') 
-      });
+    console.log(`🔄 [Update Subject] ID: ${req.params.id}`);
+    console.log(`🔄 [Update Subject] Request body:`, req.body);
+    
+    try {
+      const validation = validateSubjectData(req.body);
+      console.log(`🔄 [Update Subject] Validation result:`, validation);
+      
+      if (!validation.isValid) {
+        console.log(`❌ [Update Subject] Validation failed:`, validation.messages);
+        return res.status(400).json({ 
+          success: false, 
+          message: validation.messages.join(', ') 
+        });
+      }
+    } catch (validationError) {
+      console.error('❌ [Update Subject] Validation error:', validationError);
+      return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูล' });
     }
 
-    await supabaseDatabase.updateSubject(req.params.id, req.body);
-    res.json({ success: true, message: 'แก้ไขวิชาเรียบร้อยแล้ว' });
+    // Transform frontend field names to database field names  
+    const updates = {
+      name: req.body.name,
+      class: req.body.class
+    };
+
+    // Only include max_score if maxScore is provided and convert to number
+    if (req.body.maxScore !== undefined && req.body.maxScore !== null && req.body.maxScore !== '') {
+      const maxScore = Number(req.body.maxScore);
+      console.log(`🔄 [Update Subject] Converting maxScore: ${req.body.maxScore} -> ${maxScore}`);
+      if (!isNaN(maxScore) && maxScore > 0) {
+        updates.max_score = maxScore;
+      } else {
+        console.log(`❌ [Update Subject] Invalid maxScore: ${req.body.maxScore}`);
+      }
+    }
+
+    console.log(`🔄 [Update Subject] Updates to apply:`, updates);
+    
+    try {
+      const result = await supabaseDatabase.updateSubject(req.params.id, updates);
+      console.log(`✅ [Update Subject] Success:`, result);
+      
+      res.json({ success: true, message: 'แก้ไขวิชาเรียบร้อยแล้ว' });
+    } catch (dbError) {
+      console.error('❌ [Update Subject] Database error:', dbError);
+      throw dbError;
+    }
   } catch (error) {
-    console.error('Update subject error:', error);
+    console.error('❌ [Update Subject] Error:', error);
+    console.error('❌ [Update Subject] Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการแก้ไขวิชา' });
   }
 });
@@ -118,16 +160,29 @@ router.get('/assignments', async (req, res) => {
     const assignments = await supabaseDatabase.getAssignments();
     const subjects = await supabaseDatabase.getSubjects();
     
+    console.log('🔍 [DEBUG] Raw assignments from DB:', assignments.length > 0 ? assignments[0] : 'No assignments');
+    console.log('🔍 [DEBUG] Available assignment fields:', assignments.length > 0 ? Object.keys(assignments[0]) : 'N/A');
+    
     // Filter out assignments that don't have a valid subject (subject was deleted)
     const validAssignments = assignments.filter(assignment => {
-      const subject = subjects.find(s => s.id === assignment.subjectId);
-      return subject && assignment.isActive; // Only show active assignments with valid subjects
+      const subjectId = assignment.subject_id;
+      const isActive = assignment.is_active !== false; // Default to true if undefined
+      const subject = subjects.find(s => s.id === subjectId);
+      
+      console.log(`🔍 [DEBUG] Assignment ${assignment.title}: subjectId=${subjectId}, isActive=${isActive}, hasSubject=${!!subject}`);
+      
+      return subject && isActive; // Only show active assignments with valid subjects
     });
     
+    console.log(`🔍 [DEBUG] Valid assignments after filtering: ${validAssignments.length}`);
+    
     const enrichedAssignments = validAssignments.map(assignment => {
-      const subject = subjects.find(s => s.id === assignment.subjectId);
+      const subjectId = assignment.subject_id;
+      const subject = subjects.find(s => s.id === subjectId);
       return {
         ...assignment,
+        subjectId: assignment.subject_id,
+        isActive: assignment.is_active,
         subjectName: subject.name,
         subjectClass: subject.class
       };
@@ -165,6 +220,16 @@ router.post('/assignments', async (req, res) => {
       await fileManager.createAssignmentFolder(subject.name, subject.class, req.body.title);
     }
     
+    // Update subject scores automatically after creating assignment
+    console.log(`🔄 [Auto Update] Updating scores for subject ${req.body.subjectId} after creating new assignment`);
+    try {
+      await supabaseDatabase.updateSubjectAssignmentCount(req.body.subjectId);
+      console.log(`✅ [Auto Update] Successfully updated scores for subject ${req.body.subjectId}`);
+    } catch (updateError) {
+      console.error(`❌ [Auto Update] Failed to update scores for subject ${req.body.subjectId}:`, updateError);
+      // Don't fail the assignment creation if score update fails
+    }
+    
     res.json({ success: true, message: 'เพิ่มงานเรียบร้อยแล้ว' });
 
   } catch (error) {
@@ -185,18 +250,45 @@ router.post('/assignments', async (req, res) => {
 
 router.put('/assignments/:id', async (req, res) => {
   try {
+    console.log(`🔄 [Update Assignment] ID: ${req.params.id}`);
+    console.log(`🔄 [Update Assignment] Request body:`, req.body);
+    
     const validation = validateAssignmentData(req.body);
+    console.log(`🔄 [Update Assignment] Validation result:`, validation);
+    
     if (!validation.isValid) {
+      console.log(`❌ [Update Assignment] Validation failed:`, validation.messages);
       return res.status(400).json({ 
         success: false, 
         message: validation.messages.join(', ') 
       });
     }
 
-    await supabaseDatabase.updateAssignment(req.params.id, req.body);
+    // Transform frontend field names to database field names
+    const updates = {
+      title: req.body.title,
+      description: req.body.description || '',
+      subject_id: req.body.subjectId
+    };
+
+    // Only include due_date if it's not empty
+    if (req.body.dueDate && req.body.dueDate.trim() !== '') {
+      updates.due_date = req.body.dueDate;
+    }
+
+    console.log(`🔄 [Update Assignment] Updates to apply:`, updates);
+
+    const result = await supabaseDatabase.updateAssignment(req.params.id, updates);
+    console.log(`✅ [Update Assignment] Success:`, result);
+    
     res.json({ success: true, message: 'แก้ไขงานเรียบร้อยแล้ว' });
   } catch (error) {
-    console.error('Update assignment error:', error);
+    console.error('❌ [Update Assignment] Error:', error);
+    console.error('❌ [Update Assignment] Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการแก้ไขงาน' });
   }
 });
@@ -295,11 +387,13 @@ router.get('/submissions', async (req, res) => {
     const assignments = await supabaseDatabase.getAssignments();
     
     const enrichedSubmissions = submissions.map(submission => {
-      const student = students.find(s => s.studentId === submission.studentId);
-      const assignment = assignments.find(a => a.id === submission.assignmentId);
+      const student = students.find(s => s.student_id === submission.students?.student_id);
+      const assignment = assignments.find(a => a.id === submission.assignment_id);
       
       return {
         ...submission,
+        studentId: submission.students?.student_id,
+        assignmentId: submission.assignment_id,
         studentName: student ? student.name : 'ไม่ทราบ',
         assignmentTitle: assignment ? assignment.title : 'ไม่ทราบ'
       };

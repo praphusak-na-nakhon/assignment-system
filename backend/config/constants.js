@@ -10,9 +10,9 @@ module.exports = {
   
   // File Upload
   MAX_FILE_SIZE: process.env.MAX_FILE_SIZE || 10485760, // 10MB
-  ALLOWED_FILE_TYPES: (process.env.ALLOWED_FILE_TYPES || 'image/jpeg,image/jpg,image/png,image/gif,application/pdf').split(','),
+  ALLOWED_FILE_TYPES: (process.env.ALLOWED_FILE_TYPES || 'image/jpeg,image/jpg,image/png,image/gif').split(','),
   
   // Auth
-  ADMIN_USERNAME: process.env.ADMIN_USERNAME || 'admin',
-  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'password123'
+  ADMIN_USERNAME: 'admin',
+  ADMIN_PASSWORD: '19022535'
 };

@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }) => {
       
       if (response.data.success) {
         const authData = {
-          user: { username },
+          user: { username, password },
           userType: 'teacher',
         };
         

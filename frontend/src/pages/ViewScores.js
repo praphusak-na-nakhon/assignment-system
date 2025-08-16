@@ -180,8 +180,8 @@ const ViewScores = () => {
                                     {student.class}
                                   </td>
                                   {/* Individual assignment scores */}
-                                  {student.assignments?.map((assignment) => (
-                                    <td key={assignment.assignmentId} className="px-3 py-4 text-center text-sm">
+                                  {student.assignments?.map((assignment, index) => (
+                                    <td key={`${student.studentId}-${assignment.assignmentTitle || assignment.assignmentId || index}`} className="px-3 py-4 text-center text-sm">
                                       <div className="flex flex-col items-center">
                                         <div className={`font-medium ${
                                           assignment.isSubmitted ? 'text-gray-900' : 'text-gray-400'

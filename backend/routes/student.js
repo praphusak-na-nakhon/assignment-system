@@ -45,10 +45,12 @@ router.get('/dashboard', authenticateStudent, async (req, res) => {
     );
     
     // Get assignments for student's subjects (only active assignments)
-    const studentAssignments = assignments.filter(assignment => 
-      studentSubjects.some(subject => subject.id === assignment.subject_id) &&
-      assignment.isActive === true
-    );
+    const studentAssignments = assignments.filter(assignment => {
+      const hasMatchingSubject = studentSubjects.some(subject => subject.id === assignment.subject_id);
+      const isActive = (assignment.is_active === true || assignment.is_active === null || assignment.is_active === undefined);
+      
+      return hasMatchingSubject && isActive;
+    });
     
     // Get student's submissions
     const studentSubmissions = submissions.filter(submission => 
@@ -62,6 +64,8 @@ router.get('/dashboard', authenticateStudent, async (req, res) => {
       
       return {
         ...assignment,
+        subjectId: assignment.subject_id,
+        isActive: assignment.is_active,
         subjectName: subject ? subject.name : 'ไม่ทราบ',
         subjectClass: subject ? subject.class : 'ไม่ทราบ',
         isSubmitted: !!submission,
@@ -150,9 +154,16 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
 
     const dataLoadTime = Date.now();
     console.log(`📊 [${new Date().toISOString()}] Validation data loaded in ${dataLoadTime - validationTime}ms`);
+    console.log(`🔍 [SUBMISSION DEBUG] Retrieved subjects count: ${subjects.length}`);
+    console.log(`🔍 [SUBMISSION DEBUG] Retrieved assignments count: ${assignments.length}`);
+    console.log(`🔍 [SUBMISSION DEBUG] Looking for subjectId: ${subjectId}`);
+    console.log(`🔍 [SUBMISSION DEBUG] Looking for assignmentId: ${assignmentId}`);
     
     const subject = subjects.find(s => s.id === subjectId);
     const assignment = assignments.find(a => a.id === assignmentId && a.subject_id === subjectId);
+    
+    console.log(`🔍 [SUBMISSION DEBUG] Found subject:`, !!subject);
+    console.log(`🔍 [SUBMISSION DEBUG] Found assignment:`, !!assignment);
     
     if (!subject || !assignment) {
       return res.status(400).json({ 
@@ -184,11 +195,33 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
     
     const fileUploadTime = Date.now();
     console.log(`✅ [${new Date().toISOString()}] File uploaded to Cloudinary: ${fileResult.fileName} in ${fileUploadTime - dataLoadTime}ms`);
+    
+    console.log(`🚀 [DEBUG] After file upload, before score calculation...`);
+    console.log(`🚀 [DEBUG] fileUrl:`, fileUrl);
+    console.log(`🚀 [DEBUG] subject exists:`, !!subject);
 
-    // Calculate score (subject.scorePerAssignment or fallback calculation)
-    const score = subject.scorePerAssignment || (
-      subject.totalAssignments > 0 ? subject.maxScore / subject.totalAssignments : 0
-    );
+    console.log(`🔍 [DEBUG] About to calculate score...`);
+    console.log(`🔍 [DEBUG] Subject object:`, JSON.stringify(subject, null, 2));
+
+    // Calculate score (use database field names)
+    console.log(`🔍 [SCORE DEBUG] Subject data:`, {
+      scorePerAssignment: subject.score_per_assignment,
+      totalAssignments: subject.total_assignments,
+      maxScore: subject.max_score
+    });
+    
+    // Use score_per_assignment if available, otherwise calculate from assignment data
+    let score = 0;
+    if (subject.score_per_assignment && subject.score_per_assignment > 0) {
+      score = subject.score_per_assignment;
+    } else {
+      // Fallback: get the assignment's score field directly
+      score = assignment.score || (
+        subject.total_assignments > 0 ? subject.max_score / subject.total_assignments : 0
+      );
+    }
+    
+    console.log(`🔍 [SCORE DEBUG] Calculated score: ${score}`);
 
     // Save submission to sheets (with Cloudinary URL)
     const submissionData = {
@@ -203,22 +236,37 @@ router.post('/submit', authenticateStudent, upload.single('file'), async (req, r
     };
 
     console.log(`📝 [${new Date().toISOString()}] Saving submission to JSON database...`);
-    // Create submission in JSON database
-    await supabaseDatabase.createSubmission(submissionData);
+    try {
+      // Create submission in JSON database
+      await supabaseDatabase.createSubmission(submissionData);
 
-    const submissionSaveTime = Date.now();
-    console.log(`✅ [${new Date().toISOString()}] Submission saved in ${submissionSaveTime - fileUploadTime}ms`);
-    console.log(`🎉 [${new Date().toISOString()}] Total process time: ${submissionSaveTime - startTime}ms`);
+      const submissionSaveTime = Date.now();
+      console.log(`✅ [${new Date().toISOString()}] Submission saved in ${submissionSaveTime - fileUploadTime}ms`);
+      console.log(`🎉 [${new Date().toISOString()}] Total process time: ${submissionSaveTime - startTime}ms`);
 
-    res.json({
-      success: true,
-      message: `ส่งงานเรียบร้อยแล้ว ได้คะแนน ${score} คะแนน (ระบบกำลังอัปเดตคะแนนรวมในเบื้องหลัง)`,
-      data: {
-        submission: submissionData,
-        score: score,
-        fileUrl: fileUrl
+      res.json({
+        success: true,
+        message: `ส่งงานเรียบร้อยแล้ว ได้คะแนน ${score} คะแนน (ระบบกำลังอัปเดตคะแนนรวมในเบื้องหลัง)`,
+        data: {
+          submission: submissionData,
+          score: score,
+          fileUrl: fileUrl
+        }
+      });
+    } catch (dbError) {
+      console.error(`❌ [${new Date().toISOString()}] Database save failed, attempting file cleanup...`, dbError);
+      
+      // Try to cleanup uploaded file since database save failed
+      try {
+        const cloudinaryService = require('../services/cloudinaryService');
+        await cloudinaryService.deleteFile(fileResult.cloudinaryId);
+        console.log(`🗑️ [${new Date().toISOString()}] Cleaned up uploaded file after database error`);
+      } catch (cleanupError) {
+        console.error(`❌ [${new Date().toISOString()}] File cleanup also failed:`, cleanupError);
       }
-    });
+      
+      throw dbError; // Re-throw to be caught by main catch block
+    }
   } catch (error) {
     const errorTime = Date.now();
     console.error(`❌ [${new Date().toISOString()}] Submit assignment error after ${errorTime - startTime}ms:`, error);
@@ -281,7 +329,7 @@ router.get('/scores', authenticateStudent, async (req, res) => {
     // Get assignments for student's subjects
     const studentAssignments = assignments.filter(assignment => 
       studentSubjects.some(subject => subject.id === assignment.subject_id) &&
-      assignment.isActive === true
+      (assignment.is_active === true || assignment.is_active === null || assignment.is_active === undefined)
     );
 
     // Calculate scores for each subject (showing all students in class)
@@ -306,9 +354,9 @@ router.get('/scores', authenticateStudent, async (req, res) => {
         const studentSubmissions = subjectSubmissions.filter(s => s.students?.student_id === student.student_id);
         
         const assignmentScores = assignments.map(assignment => {
-          const submission = studentSubmissions.find(s => s.assignment_id === assignment.assignment_id);
+          const submission = studentSubmissions.find(s => s.assignment_id === assignment.assignmentId);
           return {
-            assignmentId: assignment.assignment_id,
+            assignmentId: assignment.assignmentId,
             assignmentTitle: assignment.assignmentTitle,
             maxScore: assignment.maxScore,
             studentScore: submission ? submission.score : 0,

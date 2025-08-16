@@ -23,7 +23,8 @@ const getAuthHeaders = () => {
     if (userType === 'teacher' && user && user.username) {
       return {
         username: user.username,
-        password: process.env.REACT_APP_ADMIN_PASSWORD || 'password123'
+        password: user.password || '19022535', // Use stored password or fallback
+        userType: 'teacher'
       };
     } else if (userType === 'student') {
       if (!user) {
@@ -102,8 +103,9 @@ export const authAPI = {
 // Student API
 export const studentAPI = {
   getDashboard: () => api.get('/student/dashboard'),
-  submitAssignment: (formData) => api.post('/student/submit', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+  submitAssignment: (formData, onUploadProgress) => api.post('/student/submit', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: onUploadProgress
   }),
   getDocuments: () => api.get('/student/documents'),
   getScores: () => api.get('/student/scores'),

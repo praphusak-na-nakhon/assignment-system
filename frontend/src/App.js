@@ -42,7 +42,12 @@ const ProtectedRoute = ({ children, requiredUserType }) => {
 // App Routes Component
 const AppRoutes = () => {
   return (
-    <Router>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true
+      }}
+    >
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<StudentLogin />} />
