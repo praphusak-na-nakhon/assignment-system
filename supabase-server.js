@@ -46,8 +46,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Import Supabase services
-const supabaseDatabase = require('./backend/services/supabaseDatabase');
-const { authenticateTeacher, authenticateStudent } = require('./backend/middlewares/supabaseAuth');
+const supabaseDatabase = require('./services/supabaseDatabase');
+const { authenticateTeacher, authenticateStudent } = require('./middlewares/auth');
+
+// Import route modules
+const studentRoutes = require('./routes/student');
+const teacherRoutes = require('./routes/teacher');
 
 // Health check
 app.get('/', async (req, res) => {
@@ -55,10 +59,35 @@ app.get('/', async (req, res) => {
   res.json({ 
     success: true, 
     message: 'Assignment System (Supabase Database)',
-    version: '3.0.0',
+    version: '3.1.0',
     timestamp: new Date().toISOString(),
     database: 'Supabase PostgreSQL',
     dbHealth: dbHealth
+  });
+});
+
+// Use route modules
+try {
+  app.use('/api/student', studentRoutes);
+  app.use('/api/teacher', teacherRoutes);
+  console.log('✅ Route modules loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load route modules:', error);
+}
+
+// Fallback student submit route (if routes/student.js fails to load)
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10485760 } });
+
+app.post('/api/student/submit', authenticateStudent, upload.single('file'), async (req, res) => {
+  console.log('🔄 [FALLBACK] Student submit route called');
+  console.log('📊 [FALLBACK] Request body:', req.body);
+  console.log('📁 [FALLBACK] File:', req.file ? { name: req.file.originalname, size: req.file.size } : 'No file');
+  console.log('👤 [FALLBACK] User:', req.user);
+  
+  return res.status(500).json({ 
+    success: false, 
+    message: 'Fallback route - routes/student.js failed to load properly' 
   });
 });
 
@@ -71,6 +100,24 @@ app.get('/api/health', async (req, res) => {
     timestamp: new Date().toISOString(),
     database: dbHealth
   });
+});
+
+// Test endpoint for debugging
+app.get('/api/test-score-update', async (req, res) => {
+  try {
+    await supabaseDatabase.testAssignmentScoreUpdate();
+    res.json({
+      success: true,
+      message: 'Test completed - check backend logs'
+    });
+  } catch (error) {
+    console.error('Test failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Test failed',
+      error: error.message
+    });
+  }
 });
 
 // Student Routes
@@ -87,7 +134,8 @@ app.post('/api/student/login', authenticateStudent, (req, res) => {
   });
 });
 
-app.get('/api/student/dashboard', authenticateStudent, async (req, res) => {
+// Student routes are now handled by routes/student.js module
+/* app.get('/api/student/dashboard', authenticateStudent, async (req, res) => {
   try {
     const [subjects, assignments, submissions] = await Promise.all([
       supabaseDatabase.getSubjects(),
@@ -119,6 +167,7 @@ app.get('/api/student/dashboard', authenticateStudent, async (req, res) => {
         description: assignment.description,
         dueDate: assignment.due_date,
         score: assignment.score,
+        subjectId: assignment.subject_id,
         subjectName: subject ? subject.name : 'ไม่ทราบ',
         subjectClass: subject ? subject.class : 'ไม่ทราบ',
         isSubmitted: !!submission,
@@ -148,9 +197,9 @@ app.get('/api/student/dashboard', authenticateStudent, async (req, res) => {
     console.error('Dashboard error:', error);
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูล' });
   }
-});
+}); */
 
-app.get('/api/student/documents', authenticateStudent, async (req, res) => {
+/* app.get('/api/student/documents', authenticateStudent, async (req, res) => {
   try {
     const [documents, subjects] = await Promise.all([
       supabaseDatabase.getDocuments(),
@@ -180,9 +229,9 @@ app.get('/api/student/documents', authenticateStudent, async (req, res) => {
     console.error('Get documents error:', error);
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลเอกสาร' });
   }
-});
+}); */
 
-app.get('/api/student/scores', authenticateStudent, async (req, res) => {
+/* app.get('/api/student/scores', authenticateStudent, async (req, res) => {
   try {
     const [subjects, assignments, submissions, students] = await Promise.all([
       supabaseDatabase.getSubjects(),
@@ -265,85 +314,10 @@ app.get('/api/student/scores', authenticateStudent, async (req, res) => {
     console.error('Get score data error:', error);
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลคะแนน' });
   }
-});
+}); */
 
-// Teacher Routes
-app.get('/api/teacher/subjects', authenticateTeacher, async (req, res) => {
-  try {
-    const subjects = await supabaseDatabase.getSubjects();
-    res.json({ success: true, data: subjects.map(s => ({
-      id: s.id,
-      name: s.name,
-      class: s.class,
-      maxScore: s.max_score,
-      totalAssignments: s.total_assignments,
-      scorePerAssignment: s.score_per_assignment,
-      scoreSheetUrl: s.score_sheet_url || ''
-    })) });
-  } catch (error) {
-    console.error('Get subjects error:', error);
-    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลวิชา' });
-  }
-});
 
-app.get('/api/teacher/students', authenticateTeacher, async (req, res) => {
-  try {
-    const students = await supabaseDatabase.getStudents();
-    res.json({ success: true, data: students.map(s => ({
-      id: s.id,
-      studentId: s.student_id,
-      name: s.name,
-      class: s.class,
-      subjects: '', // Legacy field
-      totalScore: s.total_score
-    })) });
-  } catch (error) {
-    console.error('Get students error:', error);
-    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลนักเรียน' });
-  }
-});
-
-app.get('/api/teacher/assignments', authenticateTeacher, async (req, res) => {
-  try {
-    const assignments = await supabaseDatabase.getAssignments();
-    res.json({ success: true, data: assignments.map(a => ({
-      id: a.id,
-      subjectId: a.subject_id,
-      title: a.title,
-      description: a.description,
-      dueDate: a.due_date,
-      score: a.score,
-      isActive: a.is_active,
-      createdAt: a.created_at,
-      subjectName: a.subjects ? a.subjects.name : '',
-      subjectClass: a.subjects ? a.subjects.class : ''
-    })) });
-  } catch (error) {
-    console.error('Get assignments error:', error);
-    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลงาน' });
-  }
-});
-
-app.get('/api/teacher/submissions', authenticateTeacher, async (req, res) => {
-  try {
-    const submissions = await supabaseDatabase.getSubmissions();
-    res.json({ success: true, data: submissions.map(s => ({
-      id: s.id,
-      studentId: s.students ? s.students.student_id : '',
-      studentName: s.students ? s.students.name : '',
-      assignmentId: s.assignment_id,
-      assignmentTitle: s.assignments ? s.assignments.title : '',
-      subjectName: s.subjects ? s.subjects.name : '',
-      fileName: s.file_name,
-      fileUrl: s.file_url,
-      score: s.score,
-      submittedAt: s.submitted_at
-    })) });
-  } catch (error) {
-    console.error('Get submissions error:', error);
-    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูลการส่งงาน' });
-  }
-});
+// All teacher routes are now handled by routes/teacher.js module
 
 // Error handling middleware
 app.use((err, req, res, next) => {
